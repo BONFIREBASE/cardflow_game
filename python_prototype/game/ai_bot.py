@@ -160,30 +160,83 @@ class RuleBasedAI:
 
     @staticmethod
     def _do_melds(engine, player):
-        """Drop all available melds."""
+        """Strategic meld dropping. Bots will now 'hold' melds to trick players or go for Tong-its."""
         melds_to_drop = RuleBasedAI._find_best_melds(player)
-        for cards, mtype in melds_to_drop:
-            if all(c in player.hand for c in cards):
+        if not melds_to_drop:
+            return
+
+        deck_rem = engine.deck.remaining()
+        hand_size = len(player.hand)
+        has_melds_on_table = len(player.melds) > 0
+        
+        # Rules and Safety Check:
+        # 1. If we can TONG-ITS right now (clear hand), do it.
+        total_meld_cards = sum(len(m[0]) for m in melds_to_drop)
+        is_tongits_win = (total_meld_cards == hand_size)
+        
+        if is_tongits_win:
+            for cards, mtype in melds_to_drop:
                 engine.drop_meld(player, cards)
-                if engine.is_game_over:
-                    return
+            return
+
+        # 2. Deception / Strategy Logic:
+        should_hold = False
+        
+        # Early game: High chance to hold melds to look 'dangerous' or wait for better runs
+        if deck_rem > 25:
+            # 75% chance to hold if we already have one safety meld down
+            if has_melds_on_table and random.random() < 0.75:
+                should_hold = True
+            # Even if no melds down, 30% chance to wait (high risk/reward)
+            elif not has_melds_on_table and random.random() < 0.30:
+                should_hold = True
+                
+        # Mid game: Holding to 'wait' for a Tong-its (if only 1-2 cards away)
+        elif deck_rem > 12:
+            rem_after_drop = hand_size - total_meld_cards
+            if has_melds_on_table and rem_after_drop <= 2 and random.random() < 0.60:
+                should_hold = True
+
+        # Execute Strategic Drops
+        for cards, mtype in melds_to_drop:
+            # CRITICAL: Always try to drop at least one meld to avoid being 'Burned' 
+            # and to allow 'Calling Fight' later.
+            if not has_melds_on_table:
+                engine.drop_meld(player, cards)
+                has_melds_on_table = True
+                # If we were told to hold, stop after the first 'Safety' meld
+                if should_hold: break
+            
+            elif not should_hold:
+                # Normal behavior: drop if not holding
+                engine.drop_meld(player, cards)
+                if engine.is_game_over: return
 
     # ─── Sapaw Logic ─────────────────────────────────────────────────
 
     @staticmethod
     def _do_sapaw(engine, player):
-        """Sapaw onto any available table meld to reduce hand points."""
+        """Sapaw onto table melds. Strategic bots may hold small cards to hide hand strength."""
         changed = True
+        deck_rem = engine.deck.remaining()
+        
         while changed:
             changed = False
             options = engine.get_sapaw_options(player)
             if not options:
                 break
 
-            # Prioritize sapaw-ing highest value cards
+            # Sort options by card value (highest first)
             options.sort(key=lambda o: o[0].value, reverse=True)
+            
             for card, meld in options:
                 if card in player.hand:
+                    # Strategy: If it's early game and card is low value (e.g. < 7),
+                    # the bot might hold it to keep its hand looking 'heavy'
+                    if deck_rem > 25 and card.value < 7 and len(player.melds) > 0:
+                        if random.random() < 0.50: # 50% chance to hold 'garbage' for deception
+                            continue
+
                     success = engine.sapaw(player, card, meld)
                     if success:
                         changed = True
@@ -232,32 +285,71 @@ class RuleBasedAI:
 
     @staticmethod
     def _should_respond_fight(engine, player, fight_context):
-        """Decide whether to fight (challenge) or fold."""
-        caller = fight_context['caller']
-        points = player.calculate_points()
+        """Decide whether to fight (challenge) or fold.
         
-        # Never challenge if burned
+        FIXED: Previous logic used a blind threshold (>20 = fold) which caused
+        bots to fold even when they had the lowest points and would win.
+        New logic estimates opponent points and compares directly.
+        """
+        caller = fight_context['caller']
+        my_points = player.calculate_points()
+        
+        # Never challenge if burned (auto-fold is handled by engine, but safety check)
         if player.is_burned:
             return 'fold'
-            
-        # Challenge if we have lower or equal points than we think the caller has
-        # Heuristic: caller likely has < 15 points
-        if points <= 5:
-            return 'fight' # Extreme confidence
-            
-        if points > 20:
-            return 'fold' # Extreme caution
-            
-        # Compare card counts as proxy for points
-        if player.card_count() < caller.card_count():
+        
+        # Estimate caller's points using visible info:
+        # Cards in hand × estimated average value per card
+        # Bots with melds tend to have lower avg value remaining
+        caller_cards = caller.card_count()
+        caller_has_melds = len(caller.melds) > 0
+        
+        # Heuristic: avg card value ~5-6 for players with melds (they shed high cards)
+        # avg ~6-7 for players without melds
+        if caller_has_melds:
+            estimated_caller_pts = caller_cards * 5
+        else:
+            estimated_caller_pts = caller_cards * 6
+        
+        # Check other opponents too — if ALL fold, we only compete vs caller
+        other_opponents = [p for p in engine.players if p != player and p != caller]
+        
+        # 1. Extreme confidence: very low points, always fight
+        if my_points <= 5:
             return 'fight'
-            
-        if player.card_count() == caller.card_count():
-            # If same card count, it's a toss up, but favor fighting if points are decent
-            return 'fight' if points <= 12 else 'fold'
-            
-        # If we have more cards, usually safer to fold unless points are very low
-        return 'fight' if points <= 8 else 'fold'
+        
+        # 2. Clear advantage: our points are lower than estimated caller points
+        if my_points < estimated_caller_pts:
+            return 'fight'
+        
+        # 3. Competitive range: similar points, factor in card count advantage
+        if my_points <= estimated_caller_pts + 5:
+            # If we have fewer or equal cards, we likely have lower value cards
+            if player.card_count() <= caller_cards:
+                return 'fight'
+            # Close enough to gamble
+            if my_points <= 15:
+                return 'fight'
+        
+        # 4. Check if opponents are burned (fewer challengers = better odds)
+        burned_opponents = sum(1 for p in other_opponents if p.is_burned)
+        if burned_opponents >= 1 and my_points <= 20:
+            return 'fight'
+        
+        # 5. Moderate points but not terrible — compare card counts as tiebreaker
+        if my_points <= 25:
+            if player.card_count() < caller_cards:
+                return 'fight'
+            if player.card_count() == caller_cards and my_points <= 18:
+                return 'fight'
+        
+        # 6. High points — only fight if we suspect caller has even more
+        if my_points <= 35:
+            if player.card_count() < caller_cards - 2:
+                return 'fight'  # Significantly fewer cards = likely lower points
+        
+        # Default: fold if points are genuinely high and no card count advantage
+        return 'fold'
 
     # ─── Discard Logic ───────────────────────────────────────────────
 

@@ -189,6 +189,10 @@ class ParticleEmitter:
     def __init__(self):
         self.particles = []
 
+    def clear(self):
+        """Removes all active particles."""
+        self.particles.clear()
+
     def emit(self, x, y, count=10, colors=None, speed=150, lifetime=0.8, size=4, gravity=True):
         import random
         if colors is None:

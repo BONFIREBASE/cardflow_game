@@ -139,7 +139,7 @@ class Player:
         valid_manual = []
         for mg in self.manual_groups:
             present = [c for c in mg if c in hand]
-            if len(present) >= 3:
+            if len(present) >= 2:
                 # Ensure we don't double-use cards across manual groups
                 already_used = False
                 for c in present:
@@ -230,13 +230,13 @@ class Player:
 
     def add_manual_group(self, cards):
         """Add a specific selection of cards to manual groups."""
-        if len(cards) < 3:
+        if len(cards) < 2:
             return
         # Remove these cards from any existing manual groups they might be in
         new_cards = list(cards)
         for i in range(len(self.manual_groups) - 1, -1, -1):
             self.manual_groups[i] = [c for c in self.manual_groups[i] if c not in new_cards]
-            if len(self.manual_groups[i]) < 3:
+            if len(self.manual_groups[i]) < 2:
                 self.manual_groups.pop(i)
         
         self.manual_groups.append(new_cards)

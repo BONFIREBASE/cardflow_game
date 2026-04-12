@@ -375,7 +375,9 @@ class TongItsEngine:
 
         self._emit_event('discard', {'player': player, 'card': card})
 
-        if not player.hand:
+        # If hand is completely empty, or all remaining cards form valid melds (0 points),
+        # the player has no unmatched cards and therefore wins by Tong-its!
+        if not player.hand or player.calculate_points() == 0:
             self._declare_tongits(player)
             return True
 
@@ -409,10 +411,12 @@ class TongItsEngine:
             'responses': {},  # player -> 'fight'/'fold'
         }
         
-        # Burned players automatically fold
+        # Burned players or players with NO melds (0 points down) automatically fold/burn
         for p in self.players:
-            if p != caller and p.is_burned:
-                self.active_fight['responses'][p] = 'fold'
+            if p != caller:
+                if p.is_burned or len(p.melds) == 0:
+                    p.is_burned = True  # Enforce burned status if they had 0 melds and someone fights
+                    self.active_fight['responses'][p] = 'fold'
         
         self._emit_event('fight_called', {'caller': caller})
         
