@@ -1,5 +1,6 @@
 import pygame
 from ui.ui_components import Colors, blur_surface
+from game.betting_configs import EconomyMode
 import math
 import time
 
@@ -102,6 +103,11 @@ class RulesModal:
         
         # 3. Virtual Content Surface for Scrolling
         view_surf = pygame.Surface((content_rect.width - 20, 1000), pygame.SRCALPHA)
+        # Handle integer mode mapping (for lobby hovers)
+        if isinstance(current_mode, int):
+            mapping = {0: EconomyMode.HITTER, 1: EconomyMode.AGGRESSIVE, 2: EconomyMode.SUSTAINED}
+            current_mode = mapping.get(current_mode, EconomyMode.HITTER)
+
         self._draw_detailed_lines(view_surf, current_mode)
         
         clip_rect = pygame.Rect(0, self.scroll_y, content_rect.width - 20, content_rect.height - 20)
@@ -155,7 +161,6 @@ class RulesModal:
                 ("• DRAW: Deck runs out; lowest hand points on table win.", (220, 220, 220)),
             ]
         elif self.active_tab == "ECONOMY MODES":
-            from game.betting_configs import EconomyMode
             lines = [
                 ("TABLE RULES: " + mode.value.upper(), Colors.TEXT_GOLD),
                 ("", (0,0,0)),

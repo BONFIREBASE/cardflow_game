@@ -58,7 +58,7 @@ class Colors:
     # Cards
     CARD_GLOW = (255, 215, 0, 100)
     CARD_SELECTED = (100, 200, 255, 150)
-    CARD_HOVER = (255, 220, 100, 50)
+    CARD_HOVER = (255, 255, 255, 60)
 
     # Phase indicator
     PHASE_ACTIVE = (80, 200, 120)
@@ -214,7 +214,7 @@ class PlayerPanel:
         self.font_name = font_name
         self.font_stats = font_stats
 
-    def draw(self, surface, x, y, player, is_active=False, show_points=False, align='center', avatar_surf=None, show_burned=False, timer_progress=0.0, is_dealer=False, dealer_img=None, bounty_ban_games=0):
+    def draw(self, surface, x, y, player, is_active=False, show_points=False, align='center', avatar_surf=None, show_burned=False, timer_progress=0.0, is_dealer=False, dealer_img=None):
         # Modern Layout Dimensions
         pw, ph = 240, 80
         if align == 'center': px = x - pw // 2
@@ -225,20 +225,8 @@ class PlayerPanel:
         # --- 1. Panel Background (Modern Glassmorphism) ---
         panel_surf = pygame.Surface((pw, ph), pygame.SRCALPHA)
         bg_alpha = 240 if is_active else 180
-        
-        # Proposal 3: 'Cold Streak' Visual for bounty ban
-        is_cold = bounty_ban_games > 0
-        panel_col = (18, 22, 36, bg_alpha)
-        if is_cold:
-            # Shift colors to cold blue
-            panel_col = (15, 30, 50, bg_alpha)
-            
-        pygame.draw.rect(panel_surf, panel_col, (0, 0, pw, ph), border_radius=18)
-        
-        border_col = (255, 255, 255, 30)
-        if is_cold: border_col = (100, 180, 255, 80) # Glowing ice border
-        
-        pygame.draw.rect(panel_surf, border_col, (0, 0, pw, ph), width=1, border_radius=18)
+        pygame.draw.rect(panel_surf, (18, 22, 36, bg_alpha), (0, 0, pw, ph), border_radius=18)
+        pygame.draw.rect(panel_surf, (255, 255, 255, 30), (0, 0, pw, ph), width=1, border_radius=18)
         
         # Active turn glow
         if is_active:
@@ -282,22 +270,11 @@ class PlayerPanel:
             init_surf = self.font_stats.render(player.name[0].upper(), True, Colors.TEXT_WHITE)
             surface.blit(init_surf, (center[0] - init_surf.get_width() // 2, center[1] - init_surf.get_height() // 2))
 
-        # Cold Streak overlay on avatar
-        if is_cold:
-            frost = pygame.Surface((target_size, target_size), pygame.SRCALPHA)
-            pygame.draw.circle(frost, (100, 200, 255, 60), (target_size//2, target_size//2), target_size//2)
-            surface.blit(frost, (av_x, av_y))
-            # Draw a tiny lock icon
-            lock_txt = self.font_stats.render("❄", True, (150, 230, 255))
-            surface.blit(lock_txt, (av_x + target_size - 15, av_y + 5))
-
         # --- 3. Text & Stats ---
         text_off_x = av_x + target_size + 14
         
-        name_txt_color = Colors.TEXT_GOLD if is_active else Colors.TEXT_WHITE
-        if is_cold: name_txt_color = (180, 220, 255)
-        
-        name_surf = self.font_name.render(player.name, True, name_txt_color)
+        name_color = Colors.TEXT_GOLD if is_active else Colors.TEXT_WHITE
+        name_surf = self.font_name.render(player.name, True, name_color)
         surface.blit(name_surf, (text_off_x, py + 12))
 
         card_text = f"{player.card_count()} CARDS"
@@ -310,10 +287,6 @@ class PlayerPanel:
         elif show_burned:
             status_color = Colors.BURN_RED if player.is_burned else Colors.SAFE_GREEN
             status_label = "BURNED" if player.is_burned else "ACTIVE"
-            if is_cold and not player.is_burned:
-                status_color = (100, 180, 255)
-                status_label = f"ICY ({bounty_ban_games}G)"
-                
             status_surf = self.font_stats.render(status_label.upper(), True, status_color)
             surface.blit(status_surf, (px + pw - status_surf.get_width() - 15, py + 42))
         else:
@@ -365,16 +338,16 @@ class FightResolutionOverlay:
         self._blurred_bg = None
 
         # Buttons (premium style)
-        btn_w, btn_h = 220, 64
+        btn_w, btn_h = 200, 58
         self.btn_fight = Button(
             width // 2 - btn_w - 25, height // 2 + 195, btn_w, btn_h,
-            "FIGHT", font_btn,
+            "⚔ FIGHT", font_btn,
             color=(180, 40, 40), hover_color=(220, 60, 60),
             border_radius=14
         )
         self.btn_fold = Button(
             width // 2 + 25, height // 2 + 195, btn_w, btn_h,
-            "FOLD", font_btn,
+            "🏳 FOLD", font_btn,
             color=(80, 85, 100), hover_color=(110, 115, 135),
             border_radius=14
         )

@@ -94,6 +94,7 @@ class Lobby:
         self.bet_values = [100, 300, 600]
         self.bet_rects = [] # Dynamic rects for the 3 bet buttons
         
+        self.help_btn_rect = pygame.Rect(0,0,0,0)
         self.recalc_banners()
 
     def recalc_banners(self):
@@ -118,6 +119,10 @@ class Lobby:
         gap = 40
         total_w = len(self.modes) * self.banner_w + (len(self.modes) - 1) * gap
         start_x = self.w // 2 - total_w // 2
+        
+        # Help Button Position (Top Right)
+        bw_h = 46
+        self.help_btn_rect = pygame.Rect(self.w - bw_h - 20, 18, bw_h, bw_h)
         start_y = self.h // 2 - self.banner_h // 2 + 20
         for i in range(len(self.modes)):
             self.banner_rects.append(pygame.Rect(start_x + i * (self.banner_w + gap), start_y, self.banner_w, self.banner_h))
@@ -139,6 +144,10 @@ class Lobby:
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Check Help Button
+            if self.help_btn_rect.collidepoint(event.pos):
+                return {"type": "help"}
+
             # Check bet selection for Casino Classic (index 0)
             if self.hover_idx == 0:
                 for b_idx, b_rect in enumerate(self.bet_rects):
@@ -323,7 +332,7 @@ class Lobby:
             surface.blit(n_txt, (rect.centerx - n_txt.get_width()//2, sep_y + 12))
             
             sub_txt = self.font_micro.render(m_sub, True, (180, 180, 200) if active else (110, 110, 120))
-            surface.blit(sub_txt, (rect.centerx - sub_txt.get_width()//2, sep_y + 40))
+            surface.blit(sub_txt, (rect.centerx - sub_txt.get_width() // 2, sep_y + 45))
             
             if not active:
                 l_rect = pygame.Rect(rect.centerx - 50, rect.centery - 13, 100, 26)
@@ -357,6 +366,25 @@ class Lobby:
         text_x = fx + 90
         p_txt = self.font_body.render(name.upper(), True, (255, 255, 255))
         surface.blit(p_txt, (text_x, ay - 2))
+
+        # 4. Draw Help Button ('?')
+        hb = self.help_btn_rect
+        is_h_hover = hb.collidepoint(pygame.mouse.get_pos())
+        
+        # Glow
+        if is_h_hover:
+            h_glow = pygame.Surface((hb.w + 20, hb.h + 20), pygame.SRCALPHA)
+            pygame.draw.circle(h_glow, (255, 215, 50, 40), (hb.w//2 + 10, hb.h//2 + 10), hb.w//2 + 10)
+            surface.blit(h_glow, (hb.x - 10, hb.y - 10))
+            
+        # Button Circle
+        pygame.draw.circle(surface, (200, 160, 40) if is_h_hover else (30, 25, 45), hb.center, hb.w // 2)
+        pygame.draw.circle(surface, (255, 215, 100), hb.center, hb.w // 2, 2)
+        
+        q_txt = self.font_body.render("?", True, (255, 215, 100))
+        surface.blit(q_txt, (hb.centerx - q_txt.get_width() // 2, hb.centery - q_txt.get_height() // 2))
+        
+        # Label removed for top-right minimalism
 
         # Win/loss with cleaner formatting
         wins_surf = self.font_micro.render(f"W {stats['wins']}", True, (100, 255, 130))

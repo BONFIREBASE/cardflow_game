@@ -7,7 +7,7 @@ class DealerManager:
     """Manages dealer state, rotation, and visual representation."""
     def __init__(self, assets_dir):
         self.dealer_idx = 0
-        self.win_streak = 0 # Track consecutive wins for the breathing effect
+        self.win_streak = 0 # Track consecutive wins for the "Hot Streak" glow
         self.chip_image = None
         self._load_assets(assets_dir)
 
@@ -46,33 +46,29 @@ class DealerManager:
         return self.dealer_idx
 
     def draw(self, surface, x, y):
-        """Draw the dealer chip. Breathes if on a win streak of 2+."""
+        """Draw the dealer chip. Pulsates ONLY if on a win streak of 1+ (won while already a dealer)."""
         if self.chip_image:
             cw, ch = self.chip_image.get_size()
             
-            # Subtle Shadow
+          
             shadow_surf = pygame.Surface((cw, ch), pygame.SRCALPHA)
             pygame.draw.circle(shadow_surf, (0, 0, 0, 90), (cw//2, ch//2), cw//2)
             surface.blit(shadow_surf, (x + 3, y + 3))
 
-            # --- "Hot Streak" Breathing Animation (Only if won 2+ times in a row) ---
-            if self.win_streak >= 2:
+   
+            surface.blit(self.chip_image, (x, y))
+
+        
+            if self.win_streak >= 1:
                 ticks = pygame.time.get_ticks()
-                # Soft, minimalist breathing (scale ±5%)
-                scale = 1.0 + 0.05 * math.sin(ticks * 0.005)
+                pulse = math.sin(ticks * 0.008) 
                 
-                nw = int(cw * scale)
-                nh = int(ch * scale)
+                alpha = int(100 + 80 * pulse)
                 
-                # Center the scaled image
-                off_x = (nw - cw) // 2
-                off_y = (nh - ch) // 2
                 
-                breathing_chip = pygame.transform.smoothscale(self.chip_image, (nw, nh))
-                surface.blit(breathing_chip, (x - off_x, y - off_y))
-            else:
-                # Base Chip
-                surface.blit(self.chip_image, (x, y))
+                glow_chip = self.chip_image.copy()
+                glow_chip.fill((255, 230, 100, alpha), special_flags=pygame.BLEND_RGBA_MULT)
+                surface.blit(glow_chip, (x, y), special_flags=pygame.BLEND_RGB_ADD)
     def get_deal_sequence(self):
         """
         Calculates the deal order based on dealer:
@@ -86,5 +82,5 @@ class DealerManager:
         sequence = []
         for _ in range(12):
             sequence.extend(round_order)
-        sequence.append(self.dealer_idx) # 13th card to dealer
+        sequence.append(self.dealer_idx)
         return sequence
