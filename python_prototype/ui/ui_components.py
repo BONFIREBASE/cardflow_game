@@ -214,7 +214,7 @@ class PlayerPanel:
         self.font_name = font_name
         self.font_stats = font_stats
 
-    def draw(self, surface, x, y, player, is_active=False, show_points=False, align='center', avatar_surf=None, show_burned=False, timer_progress=0.0, is_dealer=False, dealer_img=None):
+    def draw(self, surface, x, y, player, is_active=False, show_points=False, align='center', avatar_surf=None, show_burned=False, timer_progress=0.0, is_dealer=False, dealer_img=None, show_cards=True):
         # Modern Layout Dimensions
         pw, ph = 240, 80
         if align == 'center': px = x - pw // 2
@@ -277,9 +277,10 @@ class PlayerPanel:
         name_surf = self.font_name.render(player.name, True, name_color)
         surface.blit(name_surf, (text_off_x, py + 12))
 
-        card_text = f"{player.card_count()} CARDS"
-        card_surf = self.font_stats.render(card_text, True, Colors.TEXT_MUTED)
-        surface.blit(card_surf, (text_off_x, py + 42))
+        if show_cards:
+            card_text = f"{player.card_count()} CARDS"
+            card_surf = self.font_stats.render(card_text, True, Colors.TEXT_MUTED)
+            surface.blit(card_surf, (text_off_x, py + 42))
 
         if show_points:
             pts_surf = self.font_stats.render(f"{player.calculate_points()} PTS", True, Colors.TEXT_GOLD)
@@ -341,13 +342,13 @@ class FightResolutionOverlay:
         btn_w, btn_h = 200, 58
         self.btn_fight = Button(
             width // 2 - btn_w - 25, height // 2 + 195, btn_w, btn_h,
-            "⚔ FIGHT", font_btn,
+            "FIGHT", font_btn,
             color=(180, 40, 40), hover_color=(220, 60, 60),
             border_radius=14
         )
         self.btn_fold = Button(
             width // 2 + 25, height // 2 + 195, btn_w, btn_h,
-            "🏳 FOLD", font_btn,
+            "FOLD", font_btn,
             color=(80, 85, 100), hover_color=(110, 115, 135),
             border_radius=14
         )
@@ -508,17 +509,26 @@ class FightResolutionOverlay:
                     self.pie_targets[i] = 0.0
 
         # ── Layout Calculations ──
-        center_x = self.width // 2 + shake_x
-        center_y = self.height // 2 + shake_y - 20
+        human_player = players[0]
+        needs_response = (human_player not in responses and human_player != caller and not human_player.is_burned)
+        
+        # Animate the scale
+        target_scale = 1.0 if not needs_response else 0.0
+        if not hasattr(self, '_pie_scale'): self._pie_scale = 0.0
+        self._pie_scale += (target_scale - self._pie_scale) * 0.15
 
-        pie_radius = 62
-        pie_thickness = 10
-        avatar_radius = 46
+        center_x = self.width // 2 + shake_x
+        center_y = self.height // 2 + shake_y - 20 + int(self._pie_scale * 30)
+
+        pie_radius = 62 + int(self._pie_scale * 20)
+        pie_thickness = 10 + int(self._pie_scale * 2)
+        avatar_radius = 46 + int(self._pie_scale * 16)
+        
         # 3 pies arranged horizontally with VS between them
-        gap = 180
+        gap = 180 + int(self._pie_scale * 60)
         pie_positions = [
             (center_x - gap, center_y - 10),   # Player 1 (left)
-            (center_x, center_y - 50),          # Caller (center, raised)
+            (center_x, center_y - 50 - int(self._pie_scale * 10)),  # Caller (center, raised)
             (center_x + gap, center_y - 10),    # Player 3 (right)
         ]
 
@@ -623,30 +633,13 @@ class FightResolutionOverlay:
             if is_visible:
                 pts_val = f"{p.calculate_points()} PTS"
                 pts_color = Colors.TEXT_GOLD if p == caller else Colors.TEXT_MUTED
-            else:
-                pts_val = "??? PTS"
-                pts_color = Colors.TEXT_MUTED
-
-            pts_surf = self.font_btn.render(pts_val, True, pts_color)
-            surface.blit(pts_surf, (px - pts_surf.get_width() // 2, py + pie_radius + 72))
+                pts_surf = self.font_btn.render(pts_val, True, pts_color)
+                surface.blit(pts_surf, (px - pts_surf.get_width() // 2, py + pie_radius + 72))
 
         # ── VS Icons between pies ──
         vs_y = center_y - 30
         self._draw_crossed_swords(surface, center_x - gap // 2, vs_y, 28)
         self._draw_crossed_swords(surface, center_x + gap // 2, vs_y, 28)
-
-        # ── YOUR POINTS (highlight) ──
-        your_pts_y = center_y + pie_radius + 115
-        your_box_w = 280
-        your_box_h = 50
-        your_box_x = center_x - your_box_w // 2
-        box_s = pygame.Surface((your_box_w, your_box_h), pygame.SRCALPHA)
-        pygame.draw.rect(box_s, (25, 30, 50, 200), (0, 0, your_box_w, your_box_h), border_radius=12)
-        pygame.draw.rect(box_s, (*Colors.TEXT_GOLD, 80), (0, 0, your_box_w, your_box_h), width=2, border_radius=12)
-        surface.blit(box_s, (your_box_x, your_pts_y))
-
-        your_txt = self.font_body.render(f"YOUR POINTS: {points}", True, Colors.TEXT_GOLD)
-        surface.blit(your_txt, (center_x - your_txt.get_width() // 2, your_pts_y + your_box_h // 2 - your_txt.get_height() // 2))
 
         # ── FIGHT / FOLD Buttons ──
         # Only show if the human player hasn't responded yet

@@ -46,29 +46,25 @@ class DealerManager:
         return self.dealer_idx
 
     def draw(self, surface, x, y):
-        """Draw the dealer chip. Pulsates ONLY if on a win streak of 1+ (won while already a dealer)."""
+        """Draw the dealer chip. Animates ONLY if on a win streak of 1+ (won while already a dealer)."""
         if self.chip_image:
             cw, ch = self.chip_image.get_size()
             
-          
+            draw_x, draw_y = x, y
+
+            # --- "Hot Streak" Bounce/Float Animation (Only if won consecutively while already a dealer, streak >= 2) ---
+            if self.win_streak >= 2:
+                ticks = pygame.time.get_ticks()
+                bounce = math.sin(ticks * 0.008)
+                draw_y += int(8 * bounce)
+
+            # Subtle Shadow
             shadow_surf = pygame.Surface((cw, ch), pygame.SRCALPHA)
             pygame.draw.circle(shadow_surf, (0, 0, 0, 90), (cw//2, ch//2), cw//2)
-            surface.blit(shadow_surf, (x + 3, y + 3))
+            surface.blit(shadow_surf, (draw_x + 3, draw_y + 3))
 
-   
-            surface.blit(self.chip_image, (x, y))
-
-        
-            if self.win_streak >= 1:
-                ticks = pygame.time.get_ticks()
-                pulse = math.sin(ticks * 0.008) 
-                
-                alpha = int(100 + 80 * pulse)
-                
-                
-                glow_chip = self.chip_image.copy()
-                glow_chip.fill((255, 230, 100, alpha), special_flags=pygame.BLEND_RGBA_MULT)
-                surface.blit(glow_chip, (x, y), special_flags=pygame.BLEND_RGB_ADD)
+            # Base Chip
+            surface.blit(self.chip_image, (draw_x, draw_y))
     def get_deal_sequence(self):
         """
         Calculates the deal order based on dealer:
@@ -82,5 +78,5 @@ class DealerManager:
         sequence = []
         for _ in range(12):
             sequence.extend(round_order)
-        sequence.append(self.dealer_idx)
+        sequence.append(self.dealer_idx) # 13th card to dealer
         return sequence

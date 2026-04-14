@@ -114,6 +114,14 @@ class ChipSystem:
     def update_layout(self, layout):
         self.banker_pot_display['x'] = layout['deck_x'] + (layout['discard_x'] - layout['deck_x']) // 2 - 20
         self.banker_pot_display['y'] = layout['deck_y'] - 65
+        
+        if len(self.main_pot_display) == 3:
+            self.main_pot_display[0]['x'] = layout['hand_center_x'] + 220
+            self.main_pot_display[0]['y'] = layout['hand_y'] - 130
+            self.main_pot_display[1]['x'] = layout['bot1_x'] - 180
+            self.main_pot_display[1]['y'] = layout['bot1_y'] + 140
+            self.main_pot_display[2]['x'] = layout['bot2_x'] + 180
+            self.main_pot_display[2]['y'] = layout['bot2_y'] + 140
 
     def add_bets(self, bet_amount, layout, banker_bet_amount=100, custom_chips=None):
         self.main_pot += bet_amount * 3
@@ -128,8 +136,7 @@ class ChipSystem:
         # Helper to generate randomized chip combinations for bots that sum exactly to total
         def generate_random_chips(amount):
             import random
-            # Cap chip denomination at 100 for a more physically satisfying, overflowing stack
-            available_chip_values = [val for val, _ in CHIP_FILE_NAMES if val <= 100]
+            available_chip_values = [val for val, _ in CHIP_FILE_NAMES]
             available = [val for val in available_chip_values if val <= amount]
             if not available: return amount
             chips = []
@@ -147,9 +154,9 @@ class ChipSystem:
         bot2_val = generate_random_chips(total_per_player)
         
         self.main_pot_display = [
-            {'val': player_val, 'x': layout['hand_center_x'] + 230, 'y': layout['hand_y'] - 60}, # Player (pushed further right)
-            {'val': bot1_val, 'x': layout['bot1_x'] - 160, 'y': layout['bot1_y'] + 110}, # Bot 1 (Right side, push left)
-            {'val': bot2_val, 'x': layout['bot2_x'] + 160, 'y': layout['bot2_y'] + 110}  # Bot 2 (Left side, push right)
+            {'val': player_val, 'x': layout['hand_center_x'] + 220, 'y': layout['hand_y'] - 130}, # Player (farther up and right from cards)
+            {'val': bot1_val, 'x': layout['bot1_x'] - 180, 'y': layout['bot1_y'] + 140}, # Bot 1 (farther left from cards, away from banker)
+            {'val': bot2_val, 'x': layout['bot2_x'] + 180, 'y': layout['bot2_y'] + 140}  # Bot 2 (farther right from cards, away from banker)
         ]
         self.banker_pot_display['amount'] = generate_random_chips(self.banker_pot) if self.banker_pot > 0 else 0
         
