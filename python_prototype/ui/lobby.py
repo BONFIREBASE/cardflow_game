@@ -393,3 +393,4 @@ class Lobby:
         surface.blit(wins_surf, (text_x, ay + 26))
         surface.blit(divider_surf, (text_x + wins_surf.get_width(), ay + 26))
         surface.blit(losses_surf, (text_x + wins_surf.get_width() + divider_surf.get_width(), ay + 26))
+        surface.blit(losses_surf, (text_x + wins_surf.get_width() + divider_surf.get_width(), ay + 26))

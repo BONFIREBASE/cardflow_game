@@ -115,6 +115,7 @@ def main():
     # Turn Timing & State Tracking
     TURN_LIMIT = 15.0
     turn_timer = TURN_LIMIT
+    tick_played = False
     last_turn_state = (0, None)
     meld_hit_zones = []
     current_bet_amount = 0
@@ -126,6 +127,7 @@ def main():
 
     # For post-game coin float animations
     post_game_floats = []
+    all_bets_announced = False
 
     def on_resize(w, h):
         nonlocal WIDTH, HEIGHT, screen, background, lobby_bkg, layout, lobby
@@ -260,6 +262,7 @@ def main():
     font_phase = load_font("JetBrainsMono", 16)
     
     # ── Profile & Stats Loading ───────────────────────────────────
+    init_db() # Ensure schema is up to date
     profile_data = load_user_profile()
     player_name = profile_data["name"]
     p_av_idx = profile_data["avatar_idx"]
@@ -336,9 +339,115 @@ def main():
     # ── State & Audio ─────────────────────────────────────────────
     # Load music paths
     music_dir = os.path.join(assets_dir, "music")
+    sfx_dir = os.path.join(assets_dir, "sfx")
     MUSIC_LOBBY = os.path.join(music_dir, "Avanti - Chance Of Sunshine (background).mp3")
     MUSIC_INGAME = os.path.join(music_dir, "Moavii - Downtown (ingame).mp3")
     
+    # --- Sound Effects ---
+    SFX_SHUFFLE = None
+    shuffle_path = os.path.join(sfx_dir, "shuffling-card.mp3")
+    if os.path.exists(shuffle_path):
+        try:
+            SFX_SHUFFLE = pygame.mixer.Sound(shuffle_path)
+            SFX_SHUFFLE.set_volume(0.6)
+        except: pass
+
+    SFX_CHIPS = None
+    chips_path = os.path.join(sfx_dir, "chips_betting.mp3")
+    if os.path.exists(chips_path):
+        try:
+            SFX_CHIPS = pygame.mixer.Sound(chips_path)
+            SFX_CHIPS.set_volume(0.7)
+        except: pass
+
+    SFX_DEAL = None
+    deal_sfx_path = os.path.join(sfx_dir, "card_distribution.mp3")
+    if os.path.exists(deal_sfx_path):
+        try:
+            SFX_DEAL = pygame.mixer.Sound(deal_sfx_path)
+            SFX_DEAL.set_volume(0.6)
+        except: pass
+
+    SFX_DRAW = None
+    draw_sfx_path = os.path.join(sfx_dir, "getting_card.wav")
+    if os.path.exists(draw_sfx_path):
+        try:
+            SFX_DRAW = pygame.mixer.Sound(draw_sfx_path)
+            SFX_DRAW.set_volume(0.6)
+        except: pass
+
+    SFX_SAPAW = None
+    sapaw_sfx_path = os.path.join(sfx_dir, "sapaw.wav")
+    if os.path.exists(sapaw_sfx_path):
+        try:
+            SFX_SAPAW = pygame.mixer.Sound(sapaw_sfx_path)
+            SFX_SAPAW.set_volume(0.7)
+        except: pass
+
+    SFX_FIGHT = None
+    fight_sfx_path = os.path.join(sfx_dir, "fight_iniate.wav")
+    if os.path.exists(fight_sfx_path):
+        try:
+            SFX_FIGHT = pygame.mixer.Sound(fight_sfx_path)
+            SFX_FIGHT.set_volume(0.8)
+        except: pass
+
+    SFX_WIN = None
+    win_sfx_path = os.path.join(sfx_dir, "player_win.wav")
+    if os.path.exists(win_sfx_path):
+        try:
+            SFX_WIN = pygame.mixer.Sound(win_sfx_path)
+            SFX_WIN.set_volume(0.8)
+        except: pass
+
+    SFX_LOSE = None
+    lose_sfx_path = os.path.join(sfx_dir, "player_lose.wav")
+    if os.path.exists(lose_sfx_path):
+        try:
+            SFX_LOSE = pygame.mixer.Sound(lose_sfx_path)
+            SFX_LOSE.set_volume(0.7)
+        except: pass
+
+    SFX_BURNED = None
+    burned_sfx_path = os.path.join(sfx_dir, "player_burned.wav")
+    if os.path.exists(burned_sfx_path):
+        try:
+            SFX_BURNED = pygame.mixer.Sound(burned_sfx_path)
+            SFX_BURNED.set_volume(0.8)
+        except: pass
+
+    SFX_TICK = None
+    tick_sfx_path = os.path.join(sfx_dir, "time_ticking.mp3")
+    if os.path.exists(tick_sfx_path):
+        try:
+            SFX_TICK = pygame.mixer.Sound(tick_sfx_path)
+            SFX_TICK.set_volume(0.6)
+        except: pass
+
+    SFX_TURN_END = None
+    turn_end_sfx_path = os.path.join(sfx_dir, "time_ends.wav")
+    if os.path.exists(turn_end_sfx_path):
+        try:
+            SFX_TURN_END = pygame.mixer.Sound(turn_end_sfx_path)
+            SFX_TURN_END.set_volume(0.6)
+        except: pass
+
+    SFX_ALL_IN = None
+    all_in_sfx_path = os.path.join(sfx_dir, "all_betsIN.wav")
+    if os.path.exists(all_in_sfx_path):
+        try:
+            SFX_ALL_IN = pygame.mixer.Sound(all_in_sfx_path)
+            SFX_ALL_IN.set_volume(0.8)
+        except: pass
+
+    SFX_CLICK = None
+    click_sfx_path = os.path.join(sfx_dir, "button_selection.wav")
+    if os.path.exists(click_sfx_path):
+        try:
+            SFX_CLICK = pygame.mixer.Sound(click_sfx_path)
+            SFX_CLICK.set_volume(0.6)
+        except: pass
+
     current_music = None
     def play_music(track_path):
         nonlocal current_music
@@ -373,7 +482,11 @@ def main():
         nonlocal dealt_count, dealt_per_player, deal_timer, flying_cards, ai_timer, selected_cards
         nonlocal game_over_overlay, fight_resolution_overlay, turn_timer, last_turn_state, meld_hit_zones
         nonlocal current_bet_amount, post_game_floats, current_bet_chips, bot_bet_timer, bot_bet_chips, bet_outro_timer, target_bet_limit
-        nonlocal current_music, play_music, MUSIC_INGAME, MUSIC_LOBBY
+        nonlocal current_music, play_music, MUSIC_INGAME, MUSIC_LOBBY, tick_played, all_bets_announced
+        
+        tick_played = False
+        all_bets_announced = False
+        if SFX_TICK: SFX_TICK.stop()
 
         if target_state == 'lobby':
             play_music(MUSIC_LOBBY)
@@ -431,6 +544,8 @@ def main():
         # Reset State Variables
         game_state = target_state
         shuffle_timer = 0.0
+        if game_state == 'shuffling' and SFX_SHUFFLE:
+            SFX_SHUFFLE.play()
         
         # Calculate deal order using DealerManager
         deal_order = dealer_mgr.get_deal_sequence()
@@ -629,11 +744,13 @@ def main():
                     # Avatar area: Bottom Left (25, H-68, 65, 65)
                     avatar_rect = pygame.Rect(25, HEIGHT - 68, 65, 65)
                     if avatar_rect.collidepoint(event.pos):
+                        if SFX_CLICK: SFX_CLICK.play()
                         profile_modal.open(player_name)
                         continue
 
                 sel_mode = lobby.handle_event(event)
                 if sel_mode is not None:
+                    if SFX_CLICK: SFX_CLICK.play()
                     if isinstance(sel_mode, dict) and sel_mode.get("type") == "help":
                         rules_modal.toggle()
                         continue
@@ -662,14 +779,23 @@ def main():
         # --- Turn Timer Logic ---
         if not engine.is_game_over and game_state not in ('shuffling', 'dealing', 'betting') and engine.game_phase != GamePhase.RESOLVING_FIGHT:
             # Only reset timer when the active player CHANGES, not on every phase move
+            turn_timer -= dt
+            
+            # --- Ticking Sound Logic ---
+            if is_player_turn and turn_timer <= 6.0 and not tick_played and not engine.is_game_over:
+                if SFX_TICK: 
+                    SFX_TICK.play() # Plays the ticking sequence
+                    tick_played = True
+            
+            # Reset tick flag and stop sound if turn changes or timer resets
             if engine.current_turn_index != last_turn_state[0]:
+                if SFX_TICK: SFX_TICK.stop()
+                if SFX_TURN_END: SFX_TURN_END.play()
+                tick_played = False
                 turn_timer = TURN_LIMIT
                 last_turn_state = (engine.current_turn_index, engine.current_phase)
             else:
-                # Keep tracking phase for secondary logic, but don't reset timer
                 last_turn_state = (engine.current_turn_index, engine.current_phase)
-            
-            turn_timer -= dt
             
             # Force action on timeout
             if turn_timer <= 0:
@@ -679,6 +805,7 @@ def main():
                 # 1. Force Draw if they haven't drawn yet
                 if engine.current_phase == TurnPhase.DRAW:
                     engine.draw_from_deck(curr_p)
+                    if SFX_DRAW: SFX_DRAW.play()
                 
                 # 2. Skip Melds/Actions if in those phases (including right after a forced draw)
                 if engine.current_phase in (TurnPhase.MELD, TurnPhase.ACTION):
@@ -721,6 +848,7 @@ def main():
                                 'elapsed': 0.0,
                                 'duration': 0.35
                             })
+                            if SFX_CHIPS: SFX_CHIPS.play()
             
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
@@ -751,6 +879,7 @@ def main():
                                         'elapsed': 0.0,
                                         'duration': 0.35
                                     })
+                                    if SFX_CHIPS: SFX_CHIPS.play()
                             
             screen.fill((0, 0, 0))
             if background: screen.blit(background,(0,0))
@@ -832,6 +961,7 @@ def main():
             if player_done and bots_done and not flying_chips:
                 game_state = 'betting_outro'
                 bet_outro_timer = 0.0
+                if SFX_CHIPS: SFX_CHIPS.stop()
                 
                 # Deduct coins and create initial main pots
                 player_stats['coins'] -= (current_bet_amount * 2 if engine.dealer_idx == 0 else current_bet_amount)
@@ -844,9 +974,14 @@ def main():
 
         # ── BETTING OUTRO ─────────────────────────────────────────────
         if game_state == 'betting_outro':
+            if not all_bets_announced:
+                if SFX_ALL_IN: SFX_ALL_IN.play()
+                all_bets_announced = True
+            
             bet_outro_timer += dt
             if bet_outro_timer > 1.6:
                 game_state = 'shuffling'
+                if SFX_SHUFFLE: SFX_SHUFFLE.play()
                 
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
@@ -946,7 +1081,10 @@ def main():
         # ── SHUFFLING ─────────────────────────────────────────────
         if game_state == 'shuffling':
             shuffle_timer += dt
-            if shuffle_timer >= SHUFFLE_DURATION: game_state = 'dealing'
+            if shuffle_timer >= SHUFFLE_DURATION: 
+                game_state = 'dealing'
+                if SFX_SHUFFLE: SFX_SHUFFLE.stop()
+                if SFX_DEAL: SFX_DEAL.play()
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE:
@@ -960,7 +1098,6 @@ def main():
                 player_panel.draw(screen, layout[f'bot{pi}_x'], layout[f'bot{pi}_y']-45, engine.players[pi], is_active=False, show_points=False, avatar_surf=assigned_avatars[pi], show_burned=False, timer_progress=0, show_cards=False)
             player_panel.draw(screen, WIDTH//2, HEIGHT-68, engine.players[0], is_active=True, show_points=False, avatar_surf=assigned_avatars[0], show_burned=False, timer_progress=0, show_cards=False)
             
-            chip_system.draw(screen)
             d_idx = dealer_mgr.get_idx()
             if d_idx < len(layout['dealer_anchors']):
                 dx, dy = layout['dealer_anchors'][d_idx]
@@ -1086,6 +1223,7 @@ def main():
             for fc in flying_cards: fc['elapsed'] += dt
             if dealt_count >= len(deal_order) and all(fc['elapsed']>=fc['duration'] for fc in flying_cards):
                 game_state = 'dealer_discard'; flying_cards.clear()
+                if SFX_DEAL: SFX_DEAL.fadeout(500)
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE:
@@ -1099,7 +1237,7 @@ def main():
                 player_panel.draw(screen, layout[f'bot{pi2}_x'], layout[f'bot{pi2}_y']-45, engine.players[pi2], is_active=False, show_points=False, avatar_surf=assigned_avatars[pi2], show_burned=False, timer_progress=0, show_cards=False)
             player_panel.draw(screen, WIDTH//2, HEIGHT-68, engine.players[0], is_active=True, show_points=False, avatar_surf=assigned_avatars[0], show_burned=False, timer_progress=0, show_cards=False)
             
-            chip_system.draw(screen)
+            # chip_system.draw(screen) removed to keep table clear during dealing
             d_idx = dealer_mgr.get_idx()
             if d_idx < len(layout['dealer_anchors']):
                 dx, dy = layout['dealer_anchors'][d_idx]
@@ -1303,6 +1441,14 @@ def main():
             
             is_win = (engine.winner and engine.winner.name == player_name)
             
+            if is_win:
+                if SFX_WIN: SFX_WIN.play()
+            else:
+                if player.is_burned and SFX_BURNED:
+                    SFX_BURNED.play()
+                elif SFX_LOSE:
+                    SFX_LOSE.play()
+            
             payout = 0
             if engine.winner:
                 payout += chip_system.main_pot
@@ -1423,10 +1569,14 @@ def main():
                                     'elapsed': -i * 0.08, 'duration': 0.45, 'player_idx': 0, 'is_face_up': True, 'card': mc
                                 })
                             if engine.drop_meld(player, list(sel_in_hand)):      
+                                if SFX_DRAW: SFX_DRAW.play()
                                 particles.emit(layout['hand_center_x'],layout['player_meld_y'],count=25,speed=200)
                                 selected_cards.clear()
                         continue
-                    if show_fight and btn_call_fight.is_clicked(event): engine.call_fight(player); continue
+                    if show_fight and btn_call_fight.is_clicked(event):
+                        engine.call_fight(player)
+                        if SFX_FIGHT: SFX_FIGHT.play()
+                        continue
 
                     # Click on closed pile → draw
                     if engine.current_phase == TurnPhase.DRAW and not is_dealer_phase:
@@ -1434,6 +1584,7 @@ def main():
                             # Pre-draw state to detect auto-tongit win
                             prev_card_count = len(player.hand)
                             if engine.draw_from_deck(player):
+                                if SFX_DRAW: SFX_DRAW.play()
                                 if not player.hand: # Auto-tongit triggered
                                     # Play some particles and don't try to access hand[-1]
                                     particles.emit(layout['hand_center_x'], layout['hand_y'], count=40)
@@ -1448,6 +1599,7 @@ def main():
                         if can_draw_discard and pile_discard_rect.collidepoint(event.pos):
                             target_card = engine.discard_pile[-1]
                             if engine.draw_from_discard(player):
+                                if SFX_DRAW: SFX_DRAW.play()
                                 if not player.hand: # Auto-tongit triggered
                                     particles.emit(layout['hand_center_x'], layout['hand_y'], count=40)
                                 else:
@@ -1481,6 +1633,7 @@ def main():
                                                 'is_face_up': True, 'card': c
                                             })
                                         engine.drop_meld(player, list(meld_to_drop))
+                                        if SFX_DRAW: SFX_DRAW.play()
                                         particles.emit(target_x, target_y, count=15)
                                     else:
                                         flying_cards.append({
@@ -1536,6 +1689,7 @@ def main():
                                 expanded_rect = pygame.Rect(mrect.x - 20, mrect.y - 20, mrect.w + 40, mrect.h + 40)
                                 if expanded_rect.collidepoint(mx,my) and tm.can_sapaw(dragging_card):
                                     if engine.sapaw(player, dragging_card, tm):     
+                                        if SFX_SAPAW: SFX_SAPAW.play()
                                         dropped = True
                                     break
 
@@ -1625,6 +1779,7 @@ def main():
                 if engine.current_phase == TurnPhase.DRAW:
                     if RuleBasedAI._should_call_fight(engine, bot):
                         engine.call_fight(bot)
+                        if SFX_FIGHT: SFX_FIGHT.play()
                         ai_timer = None # Reset for next phase
                         continue
 
@@ -1636,6 +1791,7 @@ def main():
                         # Bot draws from discard pile
                         drawn_card = engine.discard_pile[-1]
                         if engine.draw_from_discard(bot):
+                            if SFX_DRAW: SFX_DRAW.play()
                             if not bot.hand:
                                 particles.emit(layout[f'bot{pi}_meld_x'], layout[f'bot{pi}_meld_y'], count=30)
                             else:
@@ -1659,6 +1815,7 @@ def main():
                                             'is_face_up': True, 'card': c
                                         })
                                     engine.drop_meld(bot, list(meld_to_drop))        
+                                    if SFX_DRAW: SFX_DRAW.play()
                                     particles.emit(target_x, target_y, count=15)        
                                 else:
                                     flying_cards.append({
@@ -1669,6 +1826,7 @@ def main():
                     else:
                         # Visual: Fly from deck to bot
                         if engine.draw_from_deck(bot):
+                            if SFX_DRAW: SFX_DRAW.play()
                             if not bot.hand:
                                 particles.emit(layout[f'bot{pi}_meld_x'], layout[f'bot{pi}_meld_y'], count=30)
                             else:
@@ -1700,6 +1858,7 @@ def main():
                                 'is_face_up': True, 'card': c
                             })
                         engine.drop_meld(bot, cards)
+                        if SFX_DRAW: SFX_DRAW.play()
                         particles.emit(target_x, target_y, count=15)
                         dropped_any = True
 
@@ -1722,6 +1881,7 @@ def main():
                                     break
 
                         engine.sapaw(bot, card, meld)
+                        if SFX_SAPAW: SFX_SAPAW.play()
                         flying_cards.append({
                            'start': (source_x, source_y), 'end': (target_x, target_y),
                            'elapsed': 0, 'duration': 0.4, 'player_idx': pi,     
@@ -1733,6 +1893,7 @@ def main():
                         # Try to call a fight if AI thinks it's a good idea and can
                         if RuleBasedAI._should_call_fight(engine, bot):     
                             engine.call_fight(bot)
+                            if SFX_FIGHT: SFX_FIGHT.play()
 
                         engine.skip_to_discard()
                         ai_timer = Timer(1.0)
@@ -1866,10 +2027,11 @@ def main():
       
             bmx = layout['bot1_meld_x'] if bi==1 else layout['bot2_meld_x']
             bmy = layout['bot1_meld_y'] if bi==1 else layout['bot2_meld_y']
-            if bot.melds: draw_player_melds(screen, bot.melds, bmx, bmy, 280)
-
-        # ── Draw Chips ────────────────────────────────────────────
-        chip_system.draw(screen)
+            if bot.melds:
+                draw_player_melds(screen, bot.melds, bmx, bmy, max_w=280)
+        # --- Draw Chips (Only during active gameplay) ---
+        if game_state in ('playing', 'dealer_discard', 'game_over'):
+            chip_system.draw(screen)
 
         # ── Player's Melds (above hand - spread wider) ────────────
         if player.melds:
