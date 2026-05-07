@@ -37,7 +37,7 @@ class ChipSystem:
         self.banker_pot_display = {'amount': 0, 'x': 0, 'y': 0}
         
         # Load Dealer Image
-        dealer_path = os.path.join("assets", "images", "banker.png")
+        dealer_path = os.path.join(assets_dir, "images", "banker.png")
         if os.path.exists(dealer_path):
             self.dealer_img = pygame.transform.smoothscale(pygame.image.load(dealer_path).convert_alpha(), (60, 60))
         else:

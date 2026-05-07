@@ -3,6 +3,7 @@ import math
 import os
 import time
 from ui.ui_components import Colors, Button, blur_surface
+from ui.paths import get_resource_path
 
 
 class ProfileModal:
@@ -35,7 +36,7 @@ class ProfileModal:
             self.font_btn = pygame.font.SysFont("Arial", 18, bold=True)
 
         # Load Sekuya for modal title
-        _sekuya_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "fonts", "Sekuya", "Sekuya-Regular.ttf")
+        _sekuya_path = get_resource_path(os.path.join("assets", "fonts", "Sekuya", "Sekuya-Regular.ttf"))
         try:
             self.font_modal_title = pygame.font.Font(_sekuya_path, 34)
         except:
@@ -70,7 +71,7 @@ class ProfileModal:
     def _load_avatars_from_assets(self):
         """Load avatars from the project directory and process them into premium circular frames."""
         self.avatars = []
-        assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+        assets_dir = get_resource_path('assets')
         avatars_dir = os.path.join(assets_dir, "images", "avatars")
 
         if os.path.exists(avatars_dir):

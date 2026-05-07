@@ -1,7 +1,8 @@
 import sqlite3
 import os
+from ui.paths import get_save_path
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "db", "user_profile.db")
+DB_PATH = get_save_path("user_profile.db")
 
 def init_db():
     """Initializes the SQLite database and migrates data if necessary."""

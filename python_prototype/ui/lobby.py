@@ -1,6 +1,8 @@
 import pygame
 import random
 import math
+import os
+from ui.paths import get_resource_path
 from .ui_components import Colors
 
 class Lobby:
@@ -13,8 +15,7 @@ class Lobby:
         self.font_small = pygame.font.SysFont("Arial", 16, bold=True)
         self.font_micro = pygame.font.SysFont("Arial", 12, bold=True)
         # Load a smaller Sekuya for coin balance
-        import os as _os
-        _sekuya_path = _os.path.join(_os.path.dirname(__file__), "..", "..", "assets", "fonts", "Sekuya", "Sekuya-Regular.ttf")
+        _sekuya_path = get_resource_path(os.path.join("assets", "fonts", "Sekuya", "Sekuya-Regular.ttf"))
         try: self.font_coins = pygame.font.Font(_sekuya_path, 22)
         except: self.font_coins = f_body
         self.time_acc = 0.0
@@ -30,7 +31,7 @@ class Lobby:
                 'alpha': random.randint(100, 255)
             })
         self.modes = [
-            ("PLAY NOW", "CASINO CLASSIC", (255, 215, 0), True),
+            ("CASINO CLASSIC", "1 VS 2 BOTS", (255, 215, 0), True),
             ("AI ARENA", "BOT TRAINING", (180, 100, 255), True),
             ("FRIENDS", "SOCIAL LOUNGE", (0, 180, 255), False),
             ("ARENA", "RANKED GLORY", (255, 60, 60), False)
@@ -74,8 +75,7 @@ class Lobby:
         
         # Load Icons
         self.icons = []
-        import os
-        lobby_dir = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "images", "lobby")
+        lobby_dir = get_resource_path(os.path.join("assets", "images", "lobby"))
         icon_files = ["play_now.png", "ai_arena.png", "friends.png", "arena_ranked.png"]
         for fn in icon_files:
             try:
@@ -156,9 +156,10 @@ class Lobby:
                         return None # Don't start game yet, just switch bet
 
             for i, r in enumerate(self.banner_rects):
-                if r.collidepoint(event.pos) and self.modes[i][3]:
-                    # Return both mode and selected bet
-                    return {"mode_idx": i, "bet": self.bet_values[self.selected_bet_idx]}
+                if self.modes[i][3]:
+                    play_rect = pygame.Rect(r.centerx - 70, r.bottom - 55, 140, 42)
+                    if play_rect.collidepoint(event.pos):
+                        return {"mode_idx": i, "bet": self.bet_values[self.selected_bet_idx]}
         return None
 
     def _get_masked_avatar(self, avatar):
@@ -332,7 +333,7 @@ class Lobby:
             surface.blit(n_txt, (rect.centerx - n_txt.get_width()//2, sep_y + 12))
             
             sub_txt = self.font_micro.render(m_sub, True, (180, 180, 200) if active else (110, 110, 120))
-            surface.blit(sub_txt, (rect.centerx - sub_txt.get_width() // 2, sep_y + 45))
+            surface.blit(sub_txt, (rect.centerx - sub_txt.get_width() // 2, sep_y + 35))
             
             if not active:
                 l_rect = pygame.Rect(rect.centerx - 50, rect.centery - 13, 100, 26)
@@ -340,6 +341,55 @@ class Lobby:
                 pygame.draw.rect(surface, (100, 100, 120, 180), l_rect, width=1, border_radius=13)
                 l_txt = self.font_micro.render("COMING SOON", True, (180, 180, 200))
                 surface.blit(l_txt, (l_rect.centerx - l_txt.get_width()//2, l_rect.centery - l_txt.get_height()//2))
+            else:
+                play_rect = pygame.Rect(rect.centerx - 70, rect.bottom - 55, 140, 42)
+                m_pos = pygame.mouse.get_pos()
+                btn_hover = play_rect.collidepoint(m_pos)
+                
+                # Modern gradient/gloss button
+                btn_surface = pygame.Surface((play_rect.w, play_rect.h), pygame.SRCALPHA)
+                
+                # Base colors
+                base_color = (30, 220, 80) if btn_hover else (20, 160, 50)
+                dark_color = (10, 140, 30) if btn_hover else (10, 100, 20)
+                
+                # Vertical gradient
+                for y in range(play_rect.h):
+                    t = y / play_rect.h
+                    r = int(base_color[0] * (1-t) + dark_color[0] * t)
+                    g = int(base_color[1] * (1-t) + dark_color[1] * t)
+                    b = int(base_color[2] * (1-t) + dark_color[2] * t)
+                    pygame.draw.line(btn_surface, (r, g, b, 255), (0, y), (play_rect.w, y))
+                    
+                # Glass highlight
+                hl_rect = pygame.Rect(2, 2, play_rect.w - 4, play_rect.h // 2)
+                pygame.draw.rect(btn_surface, (255, 255, 255, 60 if btn_hover else 30), hl_rect, border_radius=18)
+                
+                # Border
+                pygame.draw.rect(btn_surface, (200, 255, 200, 180), (0, 0, play_rect.w, play_rect.h), width=2, border_radius=20)
+                
+                # Apply rounded mask
+                mask = pygame.Surface((play_rect.w, play_rect.h), pygame.SRCALPHA)
+                pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, play_rect.w, play_rect.h), border_radius=20)
+                btn_surface.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+                
+                # Drop shadow
+                shadow = pygame.Surface((play_rect.w + 6, play_rect.h + 8), pygame.SRCALPHA)
+                pygame.draw.rect(shadow, (0, 0, 0, 80), (0, 0, shadow.get_width(), shadow.get_height()), border_radius=22)
+                surface.blit(shadow, (play_rect.x - 3, play_rect.y - 1))
+                
+                surface.blit(btn_surface, play_rect)
+                
+                # Dynamic text sizing/coloring
+                p_text = "P L A Y" if btn_hover else "PLAY"
+                p_txt = self.font_body.render(p_text, True, (255, 255, 255))
+                # Text Shadow
+                p_shadow = self.font_body.render(p_text, True, (0, 80, 0))
+                
+                cx = play_rect.centerx - p_txt.get_width()//2
+                cy = play_rect.centery - p_txt.get_height()//2
+                surface.blit(p_shadow, (cx + 1, cy + 2))
+                surface.blit(p_txt, (cx, cy))
 
         # 4. Vignette & Footer
         surface.blit(self.vignette_surf, (0, 0))

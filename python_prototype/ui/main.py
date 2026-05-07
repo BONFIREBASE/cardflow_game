@@ -178,7 +178,7 @@ def main():
 
     # Lobby Background (specific)
     try:
-        lb_bkg_path = os.path.join(assets_dir, "images", "casino_lobby_bg.png")
+        lb_bkg_path = os.path.join(assets_dir, "images", "lobyy.jpg")
         lobby_bkg_raw = pygame.image.load(lb_bkg_path).convert()
         lobby_bkg = pygame.transform.scale(lobby_bkg_raw, (WIDTH, HEIGHT))
     except:
