@@ -529,3 +529,22 @@ class Lobby:
 
 
         # 4. Draw Help Button ('?')
+        hb = self.help_btn_rect
+        m_pos = pygame.mouse.get_pos()
+        hb_hover = hb.collidepoint(m_pos)
+        
+        # Draw background circle
+        bc = (255, 215, 50) if hb_hover else (40, 45, 60, 180)
+        pygame.draw.circle(surface, bc, hb.center, hb.w // 2)
+        
+        # Draw border
+        pygame.draw.circle(surface, (255, 255, 255, 200), hb.center, hb.w // 2, width=2)
+        
+        # Draw '?' text
+        try:
+            f_help = pygame.font.SysFont("Arial", 24, bold=True)
+        except:
+            f_help = self.font_body
+        tc = (20, 15, 0) if hb_hover else (220, 220, 230)
+        txt_help = f_help.render("?", True, tc)
+        surface.blit(txt_help, (hb.centerx - txt_help.get_width()//2, hb.centery - txt_help.get_height()//2))

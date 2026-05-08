@@ -1,4 +1,5 @@
 import sys, os, math, pygame, random, json, time
+from PIL import Image, ImageSequence
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from game.engine import TongItsEngine
@@ -99,12 +100,22 @@ def draw_hand_ribbon(surface, rects, text="", is_front=True):
 # --- Profile Persistence ---
 from ui.database import init_db, load_user_profile, save_user_profile
 
+def load_gif(filename):
+    pil_image = Image.open(filename)
+    frames = []
+    for frame in ImageSequence.Iterator(pil_image):
+        frame = frame.convert("RGBA")
+        pygame_image = pygame.image.fromstring(
+            frame.tobytes(), frame.size, frame.mode
+        ).convert_alpha()
+        frames.append(pygame_image)
+    return frames
+
 def main():
     pygame.init()
     pygame.mixer.init()
-    # Default windowed resolution (1280x720)
     WIDTH, HEIGHT = 1280, 720
-    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
     pygame.display.set_caption("Cardflow")
     
     # Set window icon
@@ -378,7 +389,23 @@ def main():
     AI_THINK_DELAY = 0.7
 
     # ΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-    game_state = 'lobby' # Start in Lobby
+    # Load splash screen GIF
+    splash_frames = []
+    splash_frame_idx = 0
+    splash_timer = 0.0
+    
+    splash_gif_path = os.path.join(assets_dir, "splashscreen.gif")
+    if os.path.exists(splash_gif_path):
+        try:
+            splash_frames = load_gif(splash_gif_path)
+            game_state = 'splashscreen'
+        except Exception as e:
+            print(f"Failed to load splash screen GIF: {e}")
+            game_state = 'lobby'
+    else:
+        print(f"Splash screen GIF not found at: {splash_gif_path}")
+        game_state = 'lobby'
+
     lobby = Lobby(WIDTH, HEIGHT, font_title, font_body, font_game_title)
     shuffle_timer = 0.0
     SHUFFLE_DURATION = 2.2
@@ -755,6 +782,36 @@ def main():
             dt = 0.0
             
         mouse_pos = pygame.mouse.get_pos()
+
+        # ΓöÇΓöÇ SPLASH SCREEN ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+        if game_state == 'splashscreen':
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    
+            screen.fill((0, 0, 0)) # Black background
+            
+            if splash_frames:
+                splash_timer += dt
+                if splash_timer >= 0.05: # 20 FPS
+                    splash_timer = 0.0
+                    splash_frame_idx += 1
+                    if splash_frame_idx >= len(splash_frames):
+                        game_state = 'lobby' # Transition to lobby
+                
+                if game_state == 'splashscreen': # Check again if we didn't just transition
+                    current_frame = splash_frames[splash_frame_idx]
+                    # Center the frame
+                    fx = (WIDTH - current_frame.get_width()) // 2
+                    fy = (HEIGHT - current_frame.get_height()) // 2
+                    screen.blit(current_frame, (fx, fy))
+                    # Hide the bottom a little bit so the watermark cant be seen
+                    pygame.draw.rect(screen, (0, 0, 0), (0, HEIGHT - 60, WIDTH, 60))
+            else:
+                game_state = 'lobby' # Fallback if no frames
+                
+            pygame.display.flip()
+            continue
 
         # ΓöÇΓöÇ LOBBY ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'lobby':
