@@ -12,9 +12,11 @@ from ui.lobby import Lobby
 from ui.profile import ProfileModal
 from ui.rules_modal import RulesModal
 from ui.reward_modal import DailyRewardModal
+from ui.confirmation_modal import ConfirmationModal
+from ui.ingame_menu import InGameMenu
 from ui.dealer import DealerManager
 from ui.chips import ChipSystem
-from ui.progression_manager import generate_bot_profile, apply_rewards, get_match_rewards
+from ui.progression_manager import generate_bot_profile, apply_rewards, get_match_rewards, apply_leaver_penalty
 from ui.paths import get_resource_path
 
 
@@ -330,6 +332,8 @@ def main():
     
     rules_modal = RulesModal(font_title, font_body, font_small)
     reward_modal = DailyRewardModal(font_title, font_body, font_small)
+    confirmation_modal = ConfirmationModal(font_title, font_body, font_small)
+    ingame_menu = InGameMenu(font_title, font_body)
 
     # Bots (NPCs with real human names)
     bot1_info = generate_npc(exclude_names=[player_name], exclude_avatars=[current_avatar])
@@ -515,6 +519,24 @@ def main():
             pygame.mixer.music.play(-1)
         except Exception as e:
             print(f"Music error: {e}")
+
+    def set_sfx_volume(volume_factor):
+        if SFX_SHUFFLE: SFX_SHUFFLE.set_volume(0.6 * volume_factor)
+        if SFX_CHIPS: SFX_CHIPS.set_volume(0.7 * volume_factor)
+        if SFX_DEAL: SFX_DEAL.set_volume(0.6 * volume_factor)
+        if SFX_DRAW: SFX_DRAW.set_volume(0.6 * volume_factor)
+        if SFX_SAPAW: SFX_SAPAW.set_volume(0.7 * volume_factor)
+        if SFX_FIGHT: SFX_FIGHT.set_volume(0.8 * volume_factor)
+        if SFX_WIN: SFX_WIN.set_volume(0.8 * volume_factor)
+        if SFX_LOSE: SFX_LOSE.set_volume(0.7 * volume_factor)
+        if SFX_BURNED: SFX_BURNED.set_volume(0.8 * volume_factor)
+        if SFX_TICK: SFX_TICK.set_volume(0.6 * volume_factor)
+        if SFX_TURN_END: SFX_TURN_END.set_volume(0.6 * volume_factor)
+        if SFX_ALL_IN: SFX_ALL_IN.set_volume(0.8 * volume_factor)
+        if SFX_CLICK: SFX_CLICK.set_volume(0.6 * volume_factor)
+
+    def set_bgm_volume(volume_factor):
+        pygame.mixer.music.set_volume(0.3 * volume_factor)
 
     # Initial music playback
     play_music(MUSIC_LOBBY)
@@ -729,6 +751,9 @@ def main():
     # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
     while running:
         dt = clock.tick(60) / 1000.0
+        if ingame_menu.is_open:
+            dt = 0.0
+            
         mouse_pos = pygame.mouse.get_pos()
 
         # ΓöÇΓöÇ LOBBY ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -781,8 +806,43 @@ def main():
                 reward_modal.update(dt, mouse_pos)
                 reward_modal.draw(screen, WIDTH, HEIGHT)
 
+
+
             for event in pygame.event.get():
-                if event.type == pygame.QUIT: running = False
+                if event.type == pygame.QUIT:
+                    if game_state != 'lobby' and game_state != 'game_over':
+                        is_ranked = (target_bet_limit >= 1000)
+                        apply_leaver_penalty(is_ranked)
+                    running = False
+
+                # --- Confirmation Modal Interception ---
+                if confirmation_modal.is_open:
+                    if confirmation_modal.handle_event(event):
+                        pass
+                    continue
+
+                # --- In-Game Menu Interception ---
+                if ingame_menu.is_open:
+                    res = ingame_menu.handle_event(event)
+                    if res == "leave":
+                        is_ranked = (target_bet_limit >= 1000)
+                        if is_ranked:
+                            def confirm_leave():
+                                apply_leaver_penalty(True)
+                                start_new_game(target_state='lobby')
+                            
+                            confirmation_modal.open(
+                                "Are you sure you want to leave?",
+                                "You will lose XP and RP as a penalty!",
+                                on_confirm=confirm_leave
+                            )
+                        else:
+                            start_new_game(target_state='lobby')
+                    elif res == "toggle_sound":
+                        set_sfx_volume(1.0 if ingame_menu.sound_on else 0.0)
+                    elif res == "toggle_bgm":
+                        set_bgm_volume(1.0 if ingame_menu.bgm_on else 0.0)
+                    continue
 
                 # --- Reward Modal Interception ---
                 if reward_modal.active:
@@ -820,6 +880,12 @@ def main():
                 if event.type == pygame.VIDEORESIZE:
                     on_resize(event.w, event.h)
                 
+                # Toggle In-Game Menu with ESC
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    if game_state != 'lobby' and game_state != 'game_over':
+                        ingame_menu.toggle()
+                        continue
+                
                 # Trigger Profile on Avatar Click
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     # Avatar area: Bottom Left (25, H-68, 65, 65)
@@ -830,7 +896,7 @@ def main():
                         continue
 
 
-                sel_mode = lobby.handle_event(event)
+                sel_mode = lobby.handle_event(event, player_stats)
                 if sel_mode is not None:
                     if SFX_CLICK: SFX_CLICK.play()
                     if isinstance(sel_mode, dict) and sel_mode.get("type") == "help":
@@ -838,6 +904,16 @@ def main():
                         continue
                     if isinstance(sel_mode, dict) and sel_mode.get("type") == "profile":
                         profile_modal.open(player_name, player_stats)
+                        continue
+                    if isinstance(sel_mode, dict) and sel_mode.get("type") == "warning_modal":
+                        msg = "This is a pro mode or advanced mode. Are you sure you want to play at this desired table even though your level is not yet high?"
+                        
+                        def proceed():
+                            nonlocal target_bet_limit
+                            target_bet_limit = sel_mode["bet"]
+                            start_new_game(target_state='betting')
+                            
+                        confirmation_modal.open(msg, proceed)
                         continue
 
 
@@ -1546,7 +1622,7 @@ def main():
             
             # Calculate and apply ranking rewards
             is_tongits = (getattr(engine, 'win_method', '') == 'tongits')
-            xp_gained, rp_gained = apply_rewards(is_win, is_tongits)
+            xp_gained, rp_gained = apply_rewards(is_win, is_tongits, target_bet_limit)
             
             # Reload profile to get updated level/rank calculated by database.py
             updated_profile = load_user_profile()
@@ -1617,10 +1693,39 @@ def main():
                 if event.type != pygame.VIDEORESIZE:
                     continue
 
-            if show_discard_modal:
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            # --- In-Game Menu Interception ---
+            if ingame_menu.is_open:
+                res = ingame_menu.handle_event(event)
+                if res == "leave":
+                    is_ranked = (target_bet_limit >= 1000)
+                    if is_ranked:
+                        def confirm_leave():
+                            apply_leaver_penalty(True)
+                            start_new_game(target_state='lobby')
+                        
+                        confirmation_modal.open(
+                            "Are you sure you want to leave?",
+                            "You will lose XP and RP as a penalty!",
+                            on_confirm=confirm_leave
+                        )
+                    else:
+                        start_new_game(target_state='lobby')
+                elif res == "toggle_sound":
+                    set_sfx_volume(1.0 if ingame_menu.sound_on else 0.0)
+                elif res == "toggle_bgm":
+                    set_bgm_volume(1.0 if ingame_menu.bgm_on else 0.0)
+                continue
+
+            # Toggle In-Game Menu with ESC
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                if show_discard_modal:
                     show_discard_modal = False
                     continue
+                if game_state != 'lobby' and game_state != 'game_over':
+                    ingame_menu.toggle()
+                    continue
+
+            if show_discard_modal:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     modal_w = min(1000, int(WIDTH * 0.85))
                     modal_h = min(600, int(HEIGHT * 0.8))
@@ -2508,6 +2613,15 @@ def main():
                       
 
         profile_inspect_overlay.draw(screen)
+        
+        # Draw In-Game Menu
+        if ingame_menu.is_open:
+            ingame_menu.draw(screen, WIDTH, HEIGHT)
+
+        # Draw Confirmation Modal
+        if confirmation_modal.is_open:
+            confirmation_modal.draw(screen, WIDTH, HEIGHT)
+
         pygame.display.flip()
     pygame.quit()
 

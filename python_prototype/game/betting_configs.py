@@ -4,6 +4,9 @@ class EconomyMode(Enum):
     HITTER = "Hitter's Bounty"    # 100 Bet
     AGGRESSIVE = "Aggressive Casino" # 300 Bet
     SUSTAINED = "Sustained Economy"  # 600 Bet
+    HIGH_STAKES = "High Stakes"      # 1000 Bet
+    VIP = "VIP Lounge"              # 5000 Bet
+    LEGENDARY = "Legendary Table"   # 10000 Bet
 
 BETTING_CONFIGS = {
     100: {
@@ -45,6 +48,48 @@ BETTING_CONFIGS = {
             "jackpot_fee": 0,
             "fight_payout_split": 0.8, # 80% to winner, 20% to next Banker Pot
             "bounty_ban_games": 2 # Burned players banned from Banker Pot for 2 games
+        }
+    },
+    1000: {
+        "mode": EconomyMode.HIGH_STAKES,
+        "table_img": "mahogany_ruby_table.png",
+        "base_ante": 1000,
+        "banker_bounty": 500,
+        "rules": {
+            "hitter_streak_required": 2,
+            "burn_penalty": 0,
+            "house_edge": False,
+            "jackpot_fee": 0,
+            "fight_payout_split": 0.8,
+            "bounty_ban_games": 2
+        }
+    },
+    5000: {
+        "mode": EconomyMode.VIP,
+        "table_img": "mahogany_ruby_table.png",
+        "base_ante": 5000,
+        "banker_bounty": 1000,
+        "rules": {
+            "hitter_streak_required": 2,
+            "burn_penalty": 0,
+            "house_edge": False,
+            "jackpot_fee": 0,
+            "fight_payout_split": 0.8,
+            "bounty_ban_games": 2
+        }
+    },
+    10000: {
+        "mode": EconomyMode.LEGENDARY,
+        "table_img": "mahogany_ruby_table.png",
+        "base_ante": 10000,
+        "banker_bounty": 2000,
+        "rules": {
+            "hitter_streak_required": 2,
+            "burn_penalty": 0,
+            "house_edge": False,
+            "jackpot_fee": 0,
+            "fight_payout_split": 0.8,
+            "bounty_ban_games": 2
         }
     }
 }

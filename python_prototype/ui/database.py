@@ -116,9 +116,6 @@ def update_progression(xp_gain, rp_gain=0):
     profile = load_user_profile()
     profile['xp'] += xp_gain
     
-    # Calculate new level based on XP
-    # Level 1-10: 1000 XP per level
-    # Level 11-50: Level * 150
     level = 1
     xp_remaining = profile['xp']
     while True:
@@ -127,7 +124,7 @@ def update_progression(xp_gain, rp_gain=0):
         else:
             req = level * 150
             
-        if xp_remaining >= req:
+        if xp_remaining >= req and level < 200:
             xp_remaining -= req
             level += 1
         else:

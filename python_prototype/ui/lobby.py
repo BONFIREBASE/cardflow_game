@@ -152,7 +152,7 @@ class Lobby:
                 p['y'] = self.h + 10
                 p['x'] = random.uniform(0, self.w)
 
-    def handle_event(self, event):
+    def handle_event(self, event, stats=None):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Check Profile Click
             ax, ay = 30, self.h - 65
@@ -166,9 +166,25 @@ class Lobby:
 
 
             # Check bet selection for modes that support it
+            reqs = {
+                0: {300: 5, 600: 10},
+                2: {1000: 10, 5000: 30, 10000: 50}
+            }
+            player_level = stats.get('level', 1) if stats else 1
+
             if self.hover_idx in self.mode_bets:
                 for b_idx, b_rect in enumerate(self.bet_rects_map.get(self.hover_idx, [])):
                     if b_rect.collidepoint(event.pos):
+                        # Check if locked
+                        mode_reqs = reqs.get(self.hover_idx, {})
+                        mode_bet_list = self.mode_bets.get(self.hover_idx, [100])
+                        val = mode_bet_list[b_idx]
+                        req_lvl = mode_reqs.get(val, 1)
+                        
+                        if self.hover_idx == 2 and player_level < req_lvl:
+                            # Hard lock Rank Mode
+                            return None
+                            
                         self.selected_bets[self.hover_idx] = b_idx
                         return None # Switch bet, don't start game
 
@@ -179,7 +195,15 @@ class Lobby:
                         # Get selected bet for this mode, or default to 0
                         mode_bet_list = self.mode_bets.get(i, [100])
                         sel_idx = self.selected_bets.get(i, 0)
-                        return {"mode_idx": i, "bet": mode_bet_list[sel_idx]}
+                        val = mode_bet_list[sel_idx]
+                        
+                        # Check soft lock for Classic Mode
+                        mode_reqs = reqs.get(i, {})
+                        req_lvl = mode_reqs.get(val, 1)
+                        if i == 0 and player_level < req_lvl:
+                            return {"type": "warning_modal", "mode_idx": i, "bet": val, "req_lvl": req_lvl}
+                            
+                        return {"mode_idx": i, "bet": val}
         return None
 
     def _get_masked_avatar(self, avatar):
@@ -362,15 +386,33 @@ class Lobby:
                 sx = rect.centerx - total_bw // 2
                 sy = sep_y - 45 # Positioned between icon/artwork and separator
                 
+                # Level requirements
+                reqs = {
+                    0: {300: 5, 600: 10},
+                    2: {1000: 10, 5000: 30, 10000: 50}
+                }
+                player_level = stats.get('level', 1) if stats else 1
+                
                 for b_idx, val in enumerate(mode_vals):
                     b_rect = pygame.Rect(sx + b_idx * (bw + 8), sy, bw, bh)
                     mode_bet_rects.append(b_rect)
                     is_sel = (self.selected_bets.get(i, 0) == b_idx)
                     
+                    # Check if locked (only hard lock Rank mode i == 2)
+                    mode_reqs = reqs.get(i, {})
+                    req_lvl = mode_reqs.get(val, 1)
+                    is_locked = (player_level < req_lvl)
+                    
                     # Button Body
-                    bc = (255, 215, 50, 220) if is_sel else (40, 45, 60, 180)
-                    if not is_sel and b_rect.collidepoint(pygame.mouse.get_pos()):
-                        bc = (255, 230, 120, 140)
+                    if i == 2 and is_locked:
+                        bc = (60, 60, 70, 150) # Grayed out
+                        tc = (120, 120, 130)
+                        is_sel = False # Cannot be selected
+                    else:
+                        bc = (255, 215, 50, 220) if is_sel else (40, 45, 60, 180)
+                        if not is_sel and b_rect.collidepoint(pygame.mouse.get_pos()):
+                            bc = (255, 230, 120, 140)
+                        tc = (20, 15, 0) if is_sel else (220, 220, 230)
                     
                     pygame.draw.rect(surface, bc, b_rect, border_radius=12)
                     if is_sel:
@@ -378,10 +420,13 @@ class Lobby:
                         glow = pygame.Surface((bw+8, bh+8), pygame.SRCALPHA)
                         pygame.draw.rect(glow, (255, 215, 50, 40), (0, 0, bw+8, bh+8), border_radius=15)
                         surface.blit(glow, (b_rect.x-4, b_rect.y-4))
-
+ 
                     # Text (Using 'k' shorthand for large values)
-                    txt_val = f"{val//1000}k" if val >= 1000 else str(val)
-                    tc = (20, 15, 0) if is_sel else (220, 220, 230)
+                    if i == 2 and is_locked:
+                        txt_val = f"Lv{req_lvl}"
+                    else:
+                        txt_val = f"{val//1000}k" if val >= 1000 else str(val)
+                        
                     v_txt = self.font_micro.render(txt_val, True, tc)
                     surface.blit(v_txt, (b_rect.centerx - v_txt.get_width()//2, b_rect.centery - v_txt.get_height()//2))
                 

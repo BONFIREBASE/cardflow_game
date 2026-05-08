@@ -3,13 +3,27 @@ from ui.database import update_progression
 
 RANKS = ["Wood", "Iron", "Bronze", "Silver", "Gold", "Immortal"]
 
-def get_match_rewards(is_win, is_tongits=False):
-    """Returns (xp, rp) based on match result."""
+def get_match_rewards(is_win, is_tongits=False, bet_limit=100):
+    """Returns (xp, rp) based on match result and bet limit."""
+    # Calculate RP multiplier based on bet limit
+    if bet_limit <= 100:
+        mult = 1.0
+    elif bet_limit <= 300:
+        mult = 1.5
+    elif bet_limit <= 600:
+        mult = 2.0
+    else:
+        # For custom high stakes tables
+        mult = 2.0 + (bet_limit - 600) / 2000.0
+
     if is_win:
         if is_tongits:
-            return 200, 35
-        return 150, 25
-    return 30, -10
+            return 200, int(35 * mult)
+        return 150, int(25 * mult)
+    
+    # Losses also lose more RP in high stakes!
+    return 30, int(-10 * mult)
+
 
 def generate_bot_profile(bet_limit):
     """Generates a realistic rank, level, and stats for a bot based on the room's bet limit."""
@@ -77,9 +91,19 @@ def generate_bot_profile(bet_limit):
 
 
 
-def apply_rewards(is_win, is_tongits=False):
+def apply_rewards(is_win, is_tongits=False, bet_limit=100):
     """Calculates and applies XP/RP to the user profile."""
-    xp, rp = get_match_rewards(is_win, is_tongits)
+    xp, rp = get_match_rewards(is_win, is_tongits, bet_limit)
     # database.py handles the actual saving and level-up logic
+    update_progression(xp, rp)
+    return xp, rp
+
+def apply_leaver_penalty(is_ranked):
+    """Applies penalties for leaving a game."""
+    if not is_ranked:
+        return 0, 0
+        
+    xp = -500
+    rp = -100
     update_progression(xp, rp)
     return xp, rp

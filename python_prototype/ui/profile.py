@@ -20,7 +20,7 @@ class ProfileModal:
 
         # Modal Dimensions
         self.modal_w = 700
-        self.modal_h = 550
+        self.modal_h = 600
         self.rect = pygame.Rect(self.w // 2 - self.modal_w // 2, self.h // 2 - self.modal_h // 2, self.modal_w, self.modal_h)
 
         # Fonts
@@ -49,6 +49,7 @@ class ProfileModal:
         self.avatars = []
         self.editing_name = False
         self.view_mode = "view" # "view" or "edit"
+        self.avatar_page = 0 # Current page for avatar selection grid
 
         # Button rects (custom gradient, not Button class)
         self._btn_w, self._btn_h = 130, 46
@@ -141,6 +142,7 @@ class ProfileModal:
         self._blurred_bg = None
         self.stats = stats or {}
         self.view_mode = "view" # Default to view mode
+        self.avatar_page = 0 # Reset page when opening
 
     def close(self):
         self.target_active = False
@@ -164,21 +166,27 @@ class ProfileModal:
         self._save_hover = self.save_rect.collidepoint(mouse_pos)
         self._cancel_hover = self.cancel_rect.collidepoint(mouse_pos)
         self._close_hover = self.close_btn_rect.collidepoint(mouse_pos)
+        col1_x = self.rect.x + 40
+        py = self.rect.y
+        self.upload_rect = pygame.Rect(col1_x, py + 330, 250, 36)
         self._upload_hover = self.upload_rect.collidepoint(mouse_pos)
 
-        col1_x = self.rect.x + 40
-        self.pen_rect = pygame.Rect(col1_x + 190, self.rect.y + 250, 30, 30)
+        self.pen_rect = pygame.Rect(col1_x + 190, py + 250, 30, 30)
         self._pen_hover = self.pen_rect.collidepoint(mouse_pos)
 
         self.hovered_avatar_idx = -1
         if self.view_mode == "edit":
-            grid_cols = 3
-            grid_start_x = self.rect.x + 360
-            grid_start_y = self.rect.y + 260
+            grid_cols = 4
+            grid_start_x = self.rect.x + 310 + 20
+            grid_start_y = py + 215 + 45
+            
+            start_idx = self.avatar_page * 12
+            end_idx = min(start_idx + 12, len(self.avatars))
 
-            for idx in range(min(6, len(self.avatars))):
-                row = idx // grid_cols
-                col = idx % grid_cols
+            for idx in range(start_idx, end_idx):
+                rel_idx = idx - start_idx
+                row = rel_idx // grid_cols
+                col = rel_idx % grid_cols
                 ax = grid_start_x + col * 80
                 ay = grid_start_y + row * 80
                 if pygame.Rect(ax, ay, 70, 70).collidepoint(mouse_pos):
@@ -200,6 +208,19 @@ class ProfileModal:
                     return None
             
             elif self.view_mode == "edit":
+                # Arrow buttons for avatar pagination
+                col2_x = self.rect.x + 310
+                py = self.rect.y
+                prev_rect = pygame.Rect(col2_x + 280, py + 220, 20, 25)
+                next_rect = pygame.Rect(col2_x + 320, py + 220, 20, 25)
+                
+                if prev_rect.collidepoint(event.pos) and self.avatar_page > 0:
+                    self.avatar_page -= 1
+                    return None
+                if next_rect.collidepoint(event.pos) and (self.avatar_page + 1) * 12 < len(self.avatars):
+                    self.avatar_page += 1
+                    return None
+
                 if self.save_rect.collidepoint(event.pos):
                     self.view_mode = "view"
                     self.player_name = self.temp_name
@@ -388,16 +409,26 @@ class ProfileModal:
             surface.blit(rp_surf, (col1_x + 110 - rp_surf.get_width()//2, py + 400))
             
         else:
-            # Edit Mode Name Input
+            # Edit Mode Name Input (Grouped in Card)
+            pygame.draw.rect(surface, (25, 30, 45, 150), (col1_x - 15, py + 215, 250, 95), border_radius=14)
+            pygame.draw.rect(surface, (255, 255, 255, 20), (col1_x - 15, py + 215, 250, 95), width=1, border_radius=14)
+            
             name_label = self.font_small.render("DISPLAY NAME", True, (160, 160, 180))
-            surface.blit(name_label, (col1_x, py + 230))
+            surface.blit(name_label, (col1_x, py + 225))
             
             box_w, box_h = 220, 40
-            box_y = py + 255
+            box_y = py + 250
             box_color = (30, 35, 55, 200) if not self.editing_name else (40, 50, 85, 230)
             pygame.draw.rect(surface, box_color, (col1_x, box_y, box_w, box_h), border_radius=10)
+            
             border_col = Colors.TEXT_GOLD if self.editing_name else (70, 75, 95)
             pygame.draw.rect(surface, border_col, (col1_x, box_y, box_w, box_h), width=1, border_radius=10)
+            
+            if self.editing_name:
+                # Subtle glow when focused
+                glow = pygame.Surface((box_w + 6, box_h + 6), pygame.SRCALPHA)
+                pygame.draw.rect(glow, (*Colors.TEXT_GOLD[:3], 30), (0, 0, box_w + 6, box_h + 6), border_radius=12)
+                surface.blit(glow, (col1_x - 3, box_y - 3))
             
             cursor = "|" if (time.time() * 2 % 2 < 1 and self.editing_name) else ""
             txt_surf = self.font_body.render(self.temp_name + cursor, True, Colors.TEXT_WHITE)
@@ -417,43 +448,72 @@ class ProfileModal:
             streak = self.stats.get('streak', 3)
             biggest_win = self.stats.get('biggest_win', 5000)
             
-            stats_data = [
-                f"Wins: {wins}",
-                f"Losses: {losses}",
-                f"Win Rate: {win_rate:.1f}%",
-                f"Current Streak: {streak}",
-                f"Biggest Win: {biggest_win} Coins"
+            # Modernized Stats Cards
+            stats_to_draw = [
+                ("WINS", str(wins), col2_x, py + 120, 140),
+                ("LOSSES", str(losses), col2_x + 160, py + 120, 140),
+                ("WIN RATE", f"{win_rate:.1f}%", col2_x, py + 200, 140),
+                ("STREAK", str(streak), col2_x + 160, py + 200, 140),
+                ("BIGGEST WIN", f"{biggest_win} Coins", col2_x, py + 280, 300)
             ]
-            
-            sy = py + 115
-            for s in stats_data:
-                s_surf = self.font_body.render(s, True, (210, 210, 220))
-                surface.blit(s_surf, (col2_x, sy))
-                sy += 25
+            for label, val, x, y, w in stats_to_draw:
+                pygame.draw.rect(surface, (25, 30, 45, 220), (x, y, w, 65), border_radius=12)
+                pygame.draw.rect(surface, (255, 255, 255, 30), (x, y, w, 65), width=1, border_radius=12)
+                lbl_surf = self.font_small.render(label, True, (160, 160, 175))
+                surface.blit(lbl_surf, (x + 12, y + 8))
+                val_surf = self.font_body.render(val, True, (240, 240, 245))
+                surface.blit(val_surf, (x + 12, y + 30))
         else:
-            # 2. Avatar Selection Grid (Smaller)
+            # 2. Avatar Selection Grid (Grouped in Card)
+            col2_x = px + 310
+            pygame.draw.rect(surface, (25, 30, 45, 150), (col2_x - 15, py + 215, 360, 290), border_radius=14)
+            pygame.draw.rect(surface, (255, 255, 255, 20), (col2_x - 15, py + 215, 360, 290), width=1, border_radius=14)
+            
             grid_label = self.font_small.render("SELECT AVATAR", True, (160, 160, 180))
-            surface.blit(grid_label, (col2_x, py + 235))
+            surface.blit(grid_label, (col2_x, py + 225))
             
-            grid_cols = 3
-            grid_start_y = py + 260
+            # Draw Pagination Arrows
+            prev_rect = pygame.Rect(col2_x + 280, py + 220, 20, 25)
+            next_rect = pygame.Rect(col2_x + 320, py + 220, 20, 25)
             
-            for idx in range(min(6, len(self.avatars))):
-                row = idx // grid_cols
-                col = idx % grid_cols
-                ax = col2_x + col * 80
+            prev_color = (200, 200, 200) if self.avatar_page > 0 else (80, 80, 80)
+            next_color = (200, 200, 200) if (self.avatar_page + 1) * 12 < len(self.avatars) else (80, 80, 80)
+            
+            prev_surf = self.font_small.render("<", True, prev_color)
+            next_surf = self.font_small.render(">", True, next_color)
+            
+            surface.blit(prev_surf, prev_rect.topleft)
+            surface.blit(next_surf, next_rect.topleft)
+            
+            grid_cols = 4
+            grid_start_y = py + 215 + 45
+            grid_start_x = col2_x + 20
+            
+            start_idx = self.avatar_page * 12
+            end_idx = min(start_idx + 12, len(self.avatars))
+            
+            for idx in range(start_idx, end_idx):
+                rel_idx = idx - start_idx
+                row = rel_idx // grid_cols
+                col = rel_idx % grid_cols
+                ax = grid_start_x + col * 80
                 ay = grid_start_y + row * 80
                 
-                if idx == self.selected_avatar_idx or idx == self.hovered_avatar_idx:
-                    glow_color = Colors.TEXT_GOLD if idx == self.selected_avatar_idx else (200, 200, 220)
-                    pygame.draw.circle(surface, glow_color, (ax + 35, ay + 35), 38, width=2)
+                if idx == self.selected_avatar_idx:
+                    # Premium selection indicator
+                    pygame.draw.circle(surface, Colors.TEXT_GOLD, (ax + 35, ay + 35), 38, width=3)
+                    glow_surf = pygame.Surface((70, 70), pygame.SRCALPHA)
+                    pygame.draw.circle(glow_surf, (*Colors.TEXT_GOLD[:3], 30), (35, 35), 35)
+                    surface.blit(glow_surf, (ax, ay))
+                elif idx == self.hovered_avatar_idx:
+                    pygame.draw.circle(surface, (200, 200, 220), (ax + 35, ay + 35), 37, width=1)
                     
                 # Scale avatar down for grid
                 av_small = pygame.transform.smoothscale(self.avatars[idx], (70, 70))
                 surface.blit(av_small, (ax, ay))
                 
-            # 3. Upload Button
-            upload_rect = pygame.Rect(col2_x, py + 425, 240, 36)
+            # 3. Upload Button (Moved to left side)
+            upload_rect = pygame.Rect(px + 40, py + 330, 250, 36)
             self._draw_gradient_btn(
                 surface, upload_rect, "UPLOAD CUSTOM",
                 (55, 60, 80), (40, 45, 65), self._upload_hover, "+"
