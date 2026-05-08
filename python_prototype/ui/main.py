@@ -99,7 +99,7 @@ def main():
     # Default windowed resolution (1280x720)
     WIDTH, HEIGHT = 1280, 720
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-    pygame.display.set_caption("Mama's Go — Tong-its")
+    pygame.display.set_caption("Mama's Go ΓÇö Tong-its")
 
     # Initialize variables used in on_resize closure early
     background_raw = background = None
@@ -154,7 +154,7 @@ def main():
         if fight_resolution_overlay:
             fight_resolution_overlay.on_resize(WIDTH, HEIGHT)
 
-    # ── Assets ────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Assets ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
 
     def refresh_background(bet_limit=100):
@@ -178,7 +178,7 @@ def main():
 
     # Lobby Background (specific)
     try:
-        lb_bkg_path = os.path.join(assets_dir, "images", "lobyy.jpg")
+        lb_bkg_path = os.path.join(assets_dir, "images", "casino_lobby_bg.png")
         lobby_bkg_raw = pygame.image.load(lb_bkg_path).convert()
         lobby_bkg = pygame.transform.scale(lobby_bkg_raw, (WIDTH, HEIGHT))
     except:
@@ -243,7 +243,7 @@ def main():
     if _d.cards: get_card_image(_d.cards[0])
     del _d
 
-    # ── Fonts ─────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Fonts ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     fonts_dir = os.path.join(assets_dir, "fonts")
     def load_font(name_query, size):
         
@@ -261,7 +261,7 @@ def main():
     font_btn = load_font("Inter_18pt-SemiBold", 18)
     font_phase = load_font("JetBrainsMono", 16)
     
-    # ── Profile & Stats Loading ───────────────────────────────────
+    # ΓöÇΓöÇ Profile & Stats Loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     init_db() # Ensure schema is up to date
     profile_data = load_user_profile()
     player_name = profile_data["name"]
@@ -274,7 +274,7 @@ def main():
         "last_replenish": profile_data.get("last_replenish", 0)
     }
 
-    # ── Engine ────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Engine ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
  
     def generate_npc(exclude_names=None, exclude_avatars=None):
         if exclude_names is None: exclude_names = []
@@ -320,7 +320,7 @@ def main():
     ai_timer = None
     AI_THINK_DELAY = 0.7
 
-    # ── State ─────────────────────────────────────────────────────
+    # ΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     game_state = 'lobby' # Start in Lobby
     lobby = Lobby(WIDTH, HEIGHT, font_title, font_body, font_game_title)
     shuffle_timer = 0.0
@@ -336,7 +336,7 @@ def main():
     flying_cards = []
     flying_chips = []
 
-    # ── State & Audio ─────────────────────────────────────────────
+    # ΓöÇΓöÇ State & Audio ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     # Load music paths
     music_dir = os.path.join(assets_dir, "music")
     sfx_dir = os.path.join(assets_dir, "sfx")
@@ -565,7 +565,7 @@ def main():
         particles.clear()
         refresh_background(target_bet_limit)
 
-    # ── UI Components ─────────────────────────────────────────────
+    # ΓöÇΓöÇ UI Components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     phase_indicator = PhaseIndicator(WIDTH // 2, 8, font_phase)
     badge_comp = Badge(font_small)
     player_panel = PlayerPanel(font_body, font_small)
@@ -645,12 +645,12 @@ def main():
     
     running = True
 
-    # ══════════════════════════════════════════════════════════════
+    # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
     while running:
         dt = clock.tick(60) / 1000.0
         mouse_pos = pygame.mouse.get_pos()
 
-        # ── LOBBY ─────────────────────────────────────────────────
+        # ΓöÇΓöÇ LOBBY ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'lobby':
             screen.fill((10, 15, 30))
             
@@ -765,7 +765,7 @@ def main():
             pygame.display.flip()
             continue
             
-        # ── GAMEPLAY UPDATES ─────────────────────────────────────
+        # ΓöÇΓöÇ GAMEPLAY UPDATES ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         particles.update(dt)
         anim_mgr.update(dt)
         
@@ -819,7 +819,7 @@ def main():
                 
                 # Turn ends, next frame will reset timer for next player index
 
-        # ── BETTING ───────────────────────────────────────────────
+        # ΓöÇΓöÇ BETTING ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'betting':
             bot_bet_timer += dt
             center_x = layout['deck_x'] + (layout['discard_x'] - layout['deck_x']) // 2 + 30
@@ -972,7 +972,7 @@ def main():
             pygame.display.flip()
             continue
 
-        # ── BETTING OUTRO ─────────────────────────────────────────────
+        # ΓöÇΓöÇ BETTING OUTRO ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'betting_outro':
             if not all_bets_announced:
                 if SFX_ALL_IN: SFX_ALL_IN.play()
@@ -1078,7 +1078,7 @@ def main():
             pygame.display.flip()
             continue
 
-        # ── SHUFFLING ─────────────────────────────────────────────
+        # ΓöÇΓöÇ SHUFFLING ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'shuffling':
             shuffle_timer += dt
             if shuffle_timer >= SHUFFLE_DURATION: 
@@ -1203,7 +1203,7 @@ def main():
             screen.blit(txt, (txt_x, txt_y))
             pygame.display.flip(); continue
 
-        # ── DEALING ───────────────────────────────────────────────
+        # ΓöÇΓöÇ DEALING ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'dealing':
             deal_timer += dt
             while deal_timer >= DEAL_INTERVAL and dealt_count < len(deal_order):
@@ -1299,9 +1299,9 @@ def main():
 
             pygame.display.flip(); continue
 
-        # ══════════════════════════════════════════════════════════
+        # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
         # GAMEPLAY STATES
-        # ══════════════════════════════════════════════════════════
+        # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
         is_dealer_phase = (game_state == 'dealer_discard')
         hand = player.hand
         groups = player.hand_groups if player.hand_groups else [('all', len(hand))]
@@ -1501,7 +1501,7 @@ def main():
                 fight_resolution_overlay.set_avatars(assigned_avatars)
             fight_resolution_overlay.update(dt, mouse_pos)
 
-        # ── Events ────────────────────────────────────────────────
+        # ΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
             elif event.type == pygame.VIDEORESIZE:
@@ -1578,10 +1578,11 @@ def main():
                         if SFX_FIGHT: SFX_FIGHT.play()
                         continue
 
-                    # Click on closed pile → draw
+                    # Click on closed pile -> draw
                     if engine.current_phase == TurnPhase.DRAW and not is_dealer_phase:
                         if pile_closed_rect.collidepoint(event.pos):
                             # Pre-draw state to detect auto-tongit win
+                            target_deck_card = engine.deck.cards[-1] if hasattr(engine.deck, 'cards') and engine.deck.cards else None
                             prev_card_count = len(player.hand)
                             if engine.draw_from_deck(player):
                                 if SFX_DRAW: SFX_DRAW.play()
@@ -1589,7 +1590,7 @@ def main():
                                     # Play some particles and don't try to access hand[-1]
                                     particles.emit(layout['hand_center_x'], layout['hand_y'], count=40)
                                 else:
-                                    drawn_card = player.hand[-1]
+                                    drawn_card = target_deck_card or player.hand[-1]
                                     flying_cards.append({
                                         'start': (layout['deck_x'], layout['deck_y']),  
                                         'end': (layout['hand_center_x'], layout['hand_y']),
@@ -1603,7 +1604,7 @@ def main():
                                 if not player.hand: # Auto-tongit triggered
                                     particles.emit(layout['hand_center_x'], layout['hand_y'], count=40)
                                 else:
-                                    drawn_card = player.hand[-1]
+                                    drawn_card = target_card
                                     meld_to_drop = None
                                     
                                     # 1. Try to use exactly selected_cards + drawn_card
@@ -1727,7 +1728,7 @@ def main():
 
                     dragging_card = None
                 elif mouse_down_card and not is_dragging:
-                    # Click (not drag) → select/deselect for meld
+                    # Click (not drag) ΓåÆ select/deselect for meld
                     # banker can select melds immediately, others must draw first
                     can_select = (engine.current_phase in (TurnPhase.MELD, TurnPhase.DISCARD) or is_dealer_phase)
                     if can_select:
@@ -1754,7 +1755,7 @@ def main():
                             else: selected_cards.append(card)
                 mouse_down_pos = None; mouse_down_card = None; is_dragging = False
 
-# ── AI Fight Responses ──────────────────────────────────────────────      
+# ΓöÇΓöÇ AI Fight Responses ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ      
         if engine.game_phase == GamePhase.RESOLVING_FIGHT and not engine.is_game_over:
             # Let bots respond sequentially
             for bot_idx in [1, 2]:
@@ -1768,7 +1769,7 @@ def main():
                         ai_timer = None
                     break # Wait for this bot to finish deciding before moving to the next
 
-        # ── AI TURNS ──────────────────────────────────────────────────
+        # ΓöÇΓöÇ AI TURNS ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if (game_state in ('playing', 'dealer_discard')) and not is_player_turn and not is_blocking:
             if not ai_timer: ai_timer = Timer(1.0)
             if ai_timer.update(dt):
@@ -1920,9 +1921,9 @@ def main():
                                 game_state = 'playing'
                     ai_timer = None
 
-        # ══════════════════════════════════════════════════════════
+        # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
         # RENDERING
-        # ══════════════════════════════════════════════════════════
+        # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
         if background: screen.blit(background,(0,0))
         else: screen.fill(Colors.TABLE_GREEN)
 
@@ -1930,7 +1931,7 @@ def main():
         small_cb = get_card_back(0.75 * CARD_SCALE)
         sw, sh = small_cb.get_width(), small_cb.get_height() if small_cb else (CW, CH)
 
-        # ── Closed Pile ───────────────────────────────────────────
+        # ΓöÇΓöÇ Closed Pile ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if small_cb and engine.deck.remaining() > 0:
             base_pile_scale = 0.75 * CARD_SCALE
             scale_factor = base_pile_scale
@@ -1961,7 +1962,7 @@ def main():
         lbl = font_small.render("Closed",True,Colors.TEXT_MUTED)
         screen.blit(lbl,(layout['deck_x']+(sw-lbl.get_width())//2, layout['deck_y']+sh+4))
 
-        # ── Discard Pile ──────────────────────────────────────────
+        # ΓöÇΓöÇ Discard Pile ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         dx2,dy2 = layout['discard_x'], layout['discard_y']
         if engine.discard_pile:
             for i in range(sc):
@@ -1989,7 +1990,7 @@ def main():
         lbl2 = font_small.render("Discard",True,Colors.TEXT_MUTED)
         screen.blit(lbl2,(dx2+(sw-lbl2.get_width())//2,dy2+sh+4))
 
-        # ── Bots ──────────────────────────────────────────────────
+        # ΓöÇΓöÇ Bots ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         for bi in [1,2]:
             bot = engine.players[bi]
             bx = layout['bot1_x'] if bi==1 else layout['bot2_x']
@@ -2033,12 +2034,12 @@ def main():
         if game_state in ('playing', 'dealer_discard', 'game_over'):
             chip_system.draw(screen)
 
-        # ── Player's Melds (above hand - spread wider) ────────────
+        # ΓöÇΓöÇ Player's Melds (above hand - spread wider) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if player.melds:
             meld_start_x = max(100, layout['hand_center_x'] - 400)
             draw_player_melds(screen, player.melds, meld_start_x, layout['player_meld_y'], max_w=800)
 
-        # ── Sapaw Hints & Highlights ──────────────
+        # ΓöÇΓöÇ Sapaw Hints & Highlights ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         # Glow all valid melds when a card is "held" (either selected or dragged)
         active_candidate = dragging_card
         if not active_candidate and len(selected_cards) == 1:
@@ -2067,7 +2068,7 @@ def main():
                          
                     screen.blit(gl, (mrect.x - 8, mrect.y - 8))
 
-        # ── Player Hand ──────────────────────────────────────────
+        # ΓöÇΓöÇ Player Hand ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         LERP_SPEED = 12.0
         flying_card_objects_hand = {fc['card'] for fc in flying_cards if fc.get('card')}
         
@@ -2174,7 +2175,7 @@ def main():
                 if rect == ribbon_g['rects'][-1]:
                     draw_hand_ribbon(screen, ribbon_g['rects'], text=ribbon_g['label'], is_front=True)
 
-        # ── Dragged Card ─────────────────────────────────────────
+        # ΓöÇΓöÇ Dragged Card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if dragging_card:
             im = get_card_image(dragging_card)
             if im:
@@ -2184,13 +2185,13 @@ def main():
                     ht = font_small.render("Release to Discard",True,Colors.TEXT_GOLD)
                     screen.blit(ht,(drag_pos[0],drag_pos[1]-25))
 
-        # ── Player Panel ─────────────────────────────────────────
+        # ΓöÇΓöÇ Player Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         player_panel.draw(screen, WIDTH//2, HEIGHT-68, player, is_active=is_player_turn, show_points=True,
                           avatar_surf=assigned_avatars[0],
                           show_burned=(engine.is_game_over or (engine.last_event and engine.last_event['type'] == 'fight')),
                           timer_progress=max(0, turn_timer / TURN_LIMIT) if is_player_turn else 0)
 
-        # ── Buttons ──────────────────────────────────────────────
+        # ΓöÇΓöÇ Buttons ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         btn_sort.draw(screen)
         btn_group.draw(screen)
         if show_drop: btn_drop_meld.draw(screen)
@@ -2198,12 +2199,12 @@ def main():
 
       
 
-        # ── Forced Meld Warning ──────────────────────────────────
+        # ΓöÇΓöÇ Forced Meld Warning ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if is_player_turn and engine.has_forced_meld_pending(player):
             w2 = font_small.render("You MUST meld the card drawn from Discard!", True, Colors.TEXT_RED)
             screen.blit(w2,(WIDTH//2-w2.get_width()//2, layout['hand_y']-55))
 
-        # ── Flying Cards ─────────────────────────────────────────
+        # ΓöÇΓöÇ Flying Cards ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         surviving_flying = []
         for fc in flying_cards:
             fc['elapsed'] += dt
@@ -2224,7 +2225,7 @@ def main():
 
         particles.draw(screen)
         
-        # ── Dealer Chip (Drawn late to be on top of cards) ────────
+        # ΓöÇΓöÇ Dealer Chip (Drawn late to be on top of cards) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         d_idx = dealer_mgr.get_idx()
         if d_idx < len(layout['dealer_anchors']):
             dx, dy = layout['dealer_anchors'][d_idx]
