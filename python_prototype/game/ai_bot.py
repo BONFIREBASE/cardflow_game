@@ -3,449 +3,506 @@ from itertools import combinations
 import random
 
 
+# ─── Session Memory ──────────────────────────────────────────────────────────
+
+class GameMemory:
+    """
+    Persists across rounds within a play session.
+    Tracks discards, fight behaviour, and player tendencies per bot.
+    """
+
+    def __init__(self):
+        self.seen_discards: set = set()          # every card ever seen in any discard pile
+        self.player_discards: dict = {}          # player_name -> [Card, ...]
+        self.fight_calls: dict = {}              # player_name -> int
+        self.rounds_observed: int = 0
+
+    # ── sync / record ────────────────────────────────────────────────────────
+
+    def sync(self, engine):
+        """Pull new discard-pile cards into memory. Call at start of every turn."""
+        for card in engine.discard_pile:
+            self.seen_discards.add(card)
+
+    def record_discard(self, player_name: str, card):
+        self.player_discards.setdefault(player_name, []).append(card)
+
+    def record_fight_call(self, player_name: str):
+        self.fight_calls[player_name] = self.fight_calls.get(player_name, 0) + 1
+
+    def new_round(self):
+        self.rounds_observed += 1
+
+    # ── queries ──────────────────────────────────────────────────────────────
+
+    def get_aggression(self, player_name: str) -> float:
+        """0.0 = passive, 1.0 = very aggressive. Based on fight-call frequency."""
+        rounds = max(self.rounds_observed, 1)
+        fights = self.fight_calls.get(player_name, 0)
+        return min((fights / rounds) * 3.0, 1.0)
+
+    def estimate_hand_strength(self, player, engine) -> float:
+        """
+        Memory-informed point estimate for an opponent.
+        Refines the flat card_count × avg_value heuristic using their
+        discard history (high discards → low remaining avg value, etc.)
+        and dead-card counts.
+        """
+        card_count = player.card_count()
+        if card_count == 0:
+            return 0.0
+
+        has_melds = len(player.melds) > 0
+        base_avg = 5.0 if has_melds else 6.0
+
+        # Refine from discard history
+        their_discards = self.player_discards.get(player.name, [])
+        if len(their_discards) >= 2:
+            d_avg = sum(c.value for c in their_discards) / len(their_discards)
+            if d_avg >= 8:        # shed high cards → hand is cheap
+                base_avg = max(3.0, base_avg - 2.0)
+            elif d_avg >= 6:
+                base_avg = max(4.0, base_avg - 1.0)
+            elif d_avg <= 3:      # kept big cards, discarded small
+                base_avg = min(8.0, base_avg + 1.5)
+
+        # Dead-card pressure: many cards of the same suit seen discarded
+        # means opponent is less likely to have a connected hand in that suit
+        dead_by_suit: dict = {}
+        for c in self.seen_discards:
+            dead_by_suit[c.suit] = dead_by_suit.get(c.suit, 0) + 1
+        max_dead = max(dead_by_suit.values()) if dead_by_suit else 0
+        if max_dead >= 5:          # one suit heavily depleted
+            base_avg = max(3.0, base_avg - 0.5)
+
+        return round(card_count * base_avg)
+
+    def is_dead(self, card) -> bool:
+        """True if this card has already been discarded (can't be in anyone's hand)."""
+        return card in self.seen_discards
+
+
+# ─── Main AI ─────────────────────────────────────────────────────────────────
+
 class RuleBasedAI:
     """
     Rule-based AI for Filipino Tong-its.
-
-    Priority order:
-    1. Draw (prefer deck; draw from discard only if it completes a meld)
-    2. Drop all available melds to avoid being burned
-    3. If drew from discard, MUST meld the drawn card first
-    4. Sapaw onto table melds to reduce hand points
-    5. Consider calling fight if hand points are low
-    6. Discard the most strategic card
+    Improvements over baseline:
+      • Card memory     – tracks every discard seen this session
+      • Opponent model  – refines point estimates from discard history
+      • Adaptive hold   – meld-hold % rises with player aggression
+      • Bluff fight     – HARD bots apply pressure on passive players
+      • Dead-card discard – prefers to throw cards already seen (safe)
+      • Sapaw deception  – HARD bots hold low-value cards for longer
     """
+
+    # Class-level registry so memory outlives individual engine instances
+    _memory_store: dict = {}   # bot_player_name -> GameMemory
+
+    @classmethod
+    def get_memory(cls, player_name: str) -> GameMemory:
+        if player_name not in cls._memory_store:
+            cls._memory_store[player_name] = GameMemory()
+        return cls._memory_store[player_name]
+
+    @classmethod
+    def reset_memory(cls, player_name: str = None):
+        if player_name:
+            cls._memory_store.pop(player_name, None)
+        else:
+            cls._memory_store.clear()
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _diff(player) -> str:
+        d = getattr(player, 'difficulty', 'MEDIUM') or 'MEDIUM'
+        return d.upper()
+
+    @staticmethod
+    def _factor(player) -> float:
+        d = RuleBasedAI._diff(player)
+        return 1.5 if d == 'EASY' else (0.7 if d == 'HARD' else 1.0)
+
+    @staticmethod
+    def _human_players(engine, bot):
+        """Opponents with no difficulty attribute set (i.e. the human player)."""
+        return [p for p in engine.players
+                if p != bot and not getattr(p, 'difficulty', None)]
+
+    # ── public entry point ───────────────────────────────────────────────────
 
     @staticmethod
     def take_turn(engine, player):
-        """Execute a complete AI turn following Tong-its rules."""
         if engine.is_game_over:
             return
 
-        # Special case: banker's/dealer's initial turn (13 cards, no draw)
+        mem = RuleBasedAI.get_memory(player.name)
+        mem.sync(engine)
+
         if engine.is_dealer_initial_discard:
             RuleBasedAI._do_banker_initial_turn(engine, player)
             return
 
-        # ── Phase 0: INITIAL ACTIONS (Fight/Sapaw) ────────────────
+        # Phase 0 – Fight or pre-draw sapaw
         if RuleBasedAI._should_call_fight(engine, player):
-            # Calculate a "confidence score" before calling
-            if random.random() < 0.85: # 15% chance to hesitate/wait
+            diff = RuleBasedAI._diff(player)
+            hesitate = 0.05 if diff == 'HARD' else 0.15
+            if random.random() > hesitate:
+                mem.record_fight_call(player.name)
                 engine.call_fight(player)
                 return
 
-        # Sapaw pre-draw is allowed! Reducing hand points early helps with fight decisions later
         RuleBasedAI._do_sapaw(engine, player)
         if engine.is_game_over:
             return
 
-        # ── Phase 1: DRAW ─────────────────────────────────────────
+        # Phase 1 – Draw
         RuleBasedAI._do_draw(engine, player)
         if engine.is_game_over:
             return
 
-        # ── Phase 2: FORCED MELD (if drew from discard) ───────────
+        # Phase 2 – Forced meld (drew from discard)
         if player.forced_meld_card is not None:
             RuleBasedAI._do_forced_meld(engine, player)
             if engine.is_game_over:
                 return
 
-        # ── Phase 3: DROP OTHER MELDS ─────────────────────────────
+        # Phase 3 – Drop melds
         RuleBasedAI._do_melds(engine, player)
         if engine.is_game_over:
             return
 
-        # ── Phase 4: SAPAW ──────────────────────────────────────
+        # Phase 4 – Sapaw
         RuleBasedAI._do_sapaw(engine, player)
         if engine.is_game_over:
             return
 
-       
-    
+        # Phase 5 – Discard
         RuleBasedAI._do_discard(engine, player)
 
-    # ─── Dealer Initial Discard ──────────────────────────────────────
+    # ── dealer initial turn ──────────────────────────────────────────────────
 
     @staticmethod
     def _do_banker_initial_turn(engine, player):
-        """Banker's first action: meld/sapaw then discard to start the pile."""
-        # The banker already has 13 cards (effectively "drawn")
-        
-        # Phase 1: Try melds
         RuleBasedAI._do_melds(engine, player)
         if engine.is_game_over:
             return
-            
-        # Phase 2: Try sapaw (rare at start)
         RuleBasedAI._do_sapaw(engine, player)
         if engine.is_game_over:
             return
-            
-        # Phase 3: Discard to end turn
         card = RuleBasedAI._choose_discard(engine, player)
         engine.dealer_initial_discard(card)
 
-    # ─── Draw Logic ──────────────────────────────────────────────────
+    # ── draw ─────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _do_draw(engine, player):
-        """
-        Decide whether to draw from closed pile or discard pile.
-        Smart logic: Passing on a discard pickup if planning to Fight.
-        """
         if engine.discard_pile:
-            top_discard = engine.discard_pile[-1]
-            if engine._can_meld_with_discard(player, top_discard):
-                # STRATEGIC CHECK:
-                # If we have very low points (< 10), we might want to FIGHT this turn.
-                # Drawing from discard PREVENTS fighting. 
-                # So if points are low, we skip the discard and draw from deck to fight.
+            top = engine.discard_pile[-1]
+            if engine._can_meld_with_discard(player, top):
+                # Skip pickup if low points + can fight right after draw from deck
                 if player.calculate_points() <= 10 and engine.can_player_fight(player):
-                    # Skip discard, drawing from deck allows CALLING FIGHT immediately after
-                    pass 
+                    pass
                 else:
-                    success = engine.draw_from_discard(player)
-                    if success:
+                    if engine.draw_from_discard(player):
                         return
-
-        # Default: draw from closed pile
         engine.draw_from_deck(player)
 
-    # ─── Forced Meld (after drawing from discard) ────────────────────
+    # ── forced meld ──────────────────────────────────────────────────────────
 
     @staticmethod
     def _do_forced_meld(engine, player):
-        """Must meld the card drawn from the discard pile."""
         forced = player.forced_meld_card
         if forced is None:
             return
-
-        # Find a meld containing the forced card
         for size in range(3, len(player.hand) + 1):
             for combo in combinations(player.hand, size):
                 cards = list(combo)
-                if forced in cards:
-                    mtype = Meld.get_meld_type(cards)
-                    if mtype:
-                        engine.drop_meld(player, cards)
-                        return
+                if forced in cards and Meld.get_meld_type(cards):
+                    engine.drop_meld(player, cards)
+                    return
 
-    # ─── Meld Detection & Dropping ───────────────────────────────────
+    # ── meld detection ───────────────────────────────────────────────────────
 
     @staticmethod
     def _find_best_melds(player):
-        """Find the best non-overlapping set of melds to drop."""
-        all_melds = []
         hand = player.hand[:]
-
+        all_melds = []
         for size in range(3, len(hand) + 1):
             for combo in combinations(hand, size):
                 cards = list(combo)
                 mtype = Meld.get_meld_type(cards)
                 if mtype:
-                    points = sum(c.value for c in cards)
-                    all_melds.append((cards, mtype, points))
-
+                    all_melds.append((cards, mtype, sum(c.value for c in cards)))
         all_melds.sort(key=lambda m: m[2], reverse=True)
 
-        selected = []
-        used_cards = set()
-        for cards, mtype, points in all_melds:
-            card_set = set(id(c) for c in cards)
-            if not card_set & used_cards:
+        selected, used = [], set()
+        for cards, mtype, pts in all_melds:
+            ids = set(id(c) for c in cards)
+            if not ids & used:
                 selected.append((cards, mtype))
-                used_cards |= card_set
-
+                used |= ids
         return selected
 
     @staticmethod
     def _do_melds(engine, player):
-        """Strategic meld dropping. Bots will now 'hold' melds to trick players or go for Tong-its."""
+        """
+        Strategic meld dropping.
+        Adaptive: HARD bots raise hold % when the human player fights frequently.
+        """
         melds_to_drop = RuleBasedAI._find_best_melds(player)
         if not melds_to_drop:
             return
 
         deck_rem = engine.deck.remaining()
         hand_size = len(player.hand)
-        has_melds_on_table = len(player.melds) > 0
-        
-        # Rules and Safety Check:
-        # 1. If we can TONG-ITS right now (clear hand), do it.
+        has_melds = len(player.melds) > 0
+        diff = RuleBasedAI._diff(player)
+
         total_meld_cards = sum(len(m[0]) for m in melds_to_drop)
-        is_tongits_win = (total_meld_cards == hand_size)
-        
-        if is_tongits_win:
+
+        # Always Tong-its immediately
+        if total_meld_cards == hand_size:
             for cards, mtype in melds_to_drop:
                 engine.drop_meld(player, cards)
             return
 
-        # 2. Deception / Strategy Logic:
         should_hold = False
-        
-        # Early game: High chance to hold melds to look 'dangerous' or wait for better runs
-        diff = getattr(player, 'difficulty', 'MEDIUM')
+
         if deck_rem > 25:
-            hold_chance = 0.75
-            wait_chance = 0.30
             if diff == 'EASY':
-                hold_chance = 0.30
-                wait_chance = 0.10
+                hold_chance, wait_chance = 0.30, 0.10
             elif diff == 'HARD':
-                hold_chance = 0.90
-                wait_chance = 0.50
+                hold_chance, wait_chance = 0.90, 0.50
+                # Adaptive: raise hold if human is aggressive
+                mem = RuleBasedAI.get_memory(player.name)
+                for hp in RuleBasedAI._human_players(engine, player):
+                    aggression = mem.get_aggression(hp.name)
+                    hold_chance = min(0.98, hold_chance + aggression * 0.08)
+            else:
+                hold_chance, wait_chance = 0.75, 0.30
 
-            # 75% chance to hold if we already have one safety meld down
-            if has_melds_on_table and random.random() < hold_chance:
+            if has_melds and random.random() < hold_chance:
                 should_hold = True
-            # Even if no melds down, 30% chance to wait (high risk/reward)
-            elif not has_melds_on_table and random.random() < wait_chance:
+            elif not has_melds and random.random() < wait_chance:
                 should_hold = True
-                
-        # Mid game: Holding to 'wait' for a Tong-its (if only 1-2 cards away)
+
         elif deck_rem > 12:
-            rem_after_drop = hand_size - total_meld_cards
-            if has_melds_on_table and rem_after_drop <= 2 and random.random() < 0.60:
+            rem_after = hand_size - total_meld_cards
+            if has_melds and rem_after <= 2 and random.random() < 0.60:
                 should_hold = True
 
-        # Execute Strategic Drops
         for cards, mtype in melds_to_drop:
-            # CRITICAL: Always try to drop at least one meld to avoid being 'Burned' 
-            # and to allow 'Calling Fight' later.
-            if not has_melds_on_table:
+            if not has_melds:
                 engine.drop_meld(player, cards)
-                has_melds_on_table = True
-                # If we were told to hold, stop after the first 'Safety' meld
-                if should_hold: break
-            
+                has_melds = True
+                if should_hold:
+                    break
             elif not should_hold:
-                # Normal behavior: drop if not holding
                 engine.drop_meld(player, cards)
-                if engine.is_game_over: return
+                if engine.is_game_over:
+                    return
 
-    # ─── Sapaw Logic ─────────────────────────────────────────────────
+    # ── sapaw ────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _do_sapaw(engine, player):
-        """Sapaw onto table melds. Strategic bots may hold small cards to hide hand strength."""
-        changed = True
+        """
+        Sapaw with deception.
+        HARD bots hold low-value cards more often to fake a heavy hand.
+        """
+        diff = RuleBasedAI._diff(player)
         deck_rem = engine.deck.remaining()
-        
+        changed = True
+
         while changed:
             changed = False
             options = engine.get_sapaw_options(player)
             if not options:
                 break
-
-            # Sort options by card value (highest first)
             options.sort(key=lambda o: o[0].value, reverse=True)
-            
+
             for card, meld in options:
-                if card in player.hand:
-                    # Strategy: If it's early game and card is low value (e.g. < 7),
-                    # the bot might hold it to keep its hand looking 'heavy'
-                    if deck_rem > 25 and card.value < 7 and len(player.melds) > 0:
-                        if random.random() < 0.50: # 50% chance to hold 'garbage' for deception
-                            continue
+                if card not in player.hand:
+                    continue
+                # Deception hold
+                hold_thr = 0.65 if diff == 'HARD' else 0.50
+                if deck_rem > 25 and card.value < 7 and len(player.melds) > 0:
+                    if random.random() < hold_thr:
+                        continue
+                if engine.sapaw(player, card, meld):
+                    changed = True
+                    if engine.is_game_over:
+                        return
 
-                    success = engine.sapaw(player, card, meld)
-                    if success:
-                        changed = True
-                        if engine.is_game_over:
-                            return
-
-    # ─── Difficulty Helper ───────────────────────────────────────────
-
-    @staticmethod
-    def _get_difficulty_factor(player):
-        diff = getattr(player, 'difficulty', 'MEDIUM')
-        if not diff:
-            diff = 'MEDIUM'
-        diff = diff.upper()
-        if diff == "EASY":
-            return 1.5  # More reckless
-        elif diff == "HARD":
-            return 0.7  # More cautious
-        else:
-            return 1.0
-
-    # ─── Fight Decision ──────────────────────────────────────────────
+    # ── fight decision ───────────────────────────────────────────────────────
 
     @staticmethod
     def _should_call_fight(engine, player):
         """
-        Decide whether to call fight based on hand points, deck size, and opponent status.
-        Uses a more aggressive 'Tong-its' playstyle.
+        Fight decision with pressure-bluff for HARD bots.
+        If the human player is passive (rarely fights back), HARD bots will
+        occasionally call a fight slightly above their confidence threshold
+        to put psychological pressure.
         """
         if not engine.can_player_fight(player):
             return False
 
         points = player.calculate_points()
-        deck_remaining = engine.deck.remaining()
-        factor = RuleBasedAI._get_difficulty_factor(player)
-        
-        # 1. Immediate Win: extremely low points
+        deck_rem = engine.deck.remaining()
+        factor = RuleBasedAI._factor(player)
+        diff = RuleBasedAI._diff(player)
+
         if points <= 5 * factor:
             return True
-            
-        # 2. Aggressive Late Game: If deck is running low
-        if deck_remaining < 10 and points <= 15 * factor:
+        if deck_rem < 10 and points <= 15 * factor:
             return True
 
-        # 3. Stratregic Mid-Game:
-        # Check if we have significantly lower points than likely opponents
-        avg_opponent_cards = sum(p.card_count() for p in engine.players if p != player) / 2
-        
-        # If we have very few cards (e.g. 3-4) and points are decent (e.g. < 10)
+        avg_opp = sum(p.card_count() for p in engine.players if p != player) / 2
         if player.card_count() <= 5 and points <= 10 * factor:
-            # If opponents have many cards (e.g. > 8), they likely have high points
-            if avg_opponent_cards > player.card_count() + 3:
+            if avg_opp > player.card_count() + 3:
                 return True
 
-        # 4. Burned status check:
-        # If someone is burned, our chances increase since they can't challenge
-        burned_count = sum(1 for p in engine.players if p != player and p.is_burned)
-        if burned_count >= 1 and points <= 12 * factor:
+        burned = sum(1 for p in engine.players if p != player and p.is_burned)
+        if burned >= 1 and points <= 12 * factor:
             return True
+
+        # HARD-only: pressure bluff on passive human
+        if diff == 'HARD':
+            mem = RuleBasedAI.get_memory(player.name)
+            for hp in RuleBasedAI._human_players(engine, player):
+                if mem.get_aggression(hp.name) < 0.2 and deck_rem < 20:
+                    if points <= 10 * factor and random.random() < 0.20:
+                        return True
 
         return False
 
     @staticmethod
     def _should_respond_fight(engine, player, fight_context):
-        """Decide whether to fight (challenge) or fold.
-        
-        FIXED: Previous logic used a blind threshold (>20 = fold) which caused
-        bots to fold even when they had the lowest points and would win.
-        New logic estimates opponent points and compares directly.
+        """
+        Respond to a fight call.
+        HARD: uses GameMemory to build a refined point estimate for the caller.
+        EASY/MEDIUM: uses original flat heuristic.
         """
         caller = fight_context['caller']
         my_points = player.calculate_points()
-        
-        # Never challenge if burned (auto-fold is handled by engine, but safety check)
         if player.is_burned:
             return 'fold'
-            
-        factor = RuleBasedAI._get_difficulty_factor(player)
-        
-        # Estimate caller's points using visible info:
-        # Cards in hand × estimated average value per card
-        # Bots with melds tend to have lower avg value remaining
-        caller_cards = caller.card_count()
-        caller_has_melds = len(caller.melds) > 0
-        
-        # Heuristic: avg card value ~5-6 for players with melds (they shed high cards)
-        # avg ~6-7 for players without melds
-        if caller_has_melds:
-            estimated_caller_pts = caller_cards * 5
+
+        factor = RuleBasedAI._factor(player)
+        diff = RuleBasedAI._diff(player)
+
+        # Point estimate for caller
+        if diff == 'HARD':
+            mem = RuleBasedAI.get_memory(player.name)
+            est_caller = mem.estimate_hand_strength(caller, engine)
         else:
-            estimated_caller_pts = caller_cards * 6
-        
-        # Check other opponents too — if ALL fold, we only compete vs caller
-        other_opponents = [p for p in engine.players if p != player and p != caller]
-        
-        # 1. Extreme confidence: very low points, always fight
+            c_cards = caller.card_count()
+            est_caller = c_cards * 5 if len(caller.melds) > 0 else c_cards * 6
+
+        other = [p for p in engine.players if p != player and p != caller]
+
         if my_points <= 5 * factor:
             return 'fight'
-        
-        # 2. Clear advantage: our points are lower than estimated caller points
-        if my_points < estimated_caller_pts:
+        if my_points < est_caller:
             return 'fight'
-        
-        # 3. Competitive range: similar points, factor in card count advantage
-        if my_points <= estimated_caller_pts + 5 * factor:
-            # If we have fewer or equal cards, we likely have lower value cards
-            if player.card_count() <= caller_cards:
+        if my_points <= est_caller + 5 * factor:
+            if player.card_count() <= caller.card_count():
                 return 'fight'
-            # Close enough to gamble
             if my_points <= 15 * factor:
                 return 'fight'
-        
-        # 4. Check if opponents are burned (fewer challengers = better odds)
-        burned_opponents = sum(1 for p in other_opponents if p.is_burned)
-        if burned_opponents >= 1 and my_points <= 20 * factor:
+
+        burned_opp = sum(1 for p in other if p.is_burned)
+        if burned_opp >= 1 and my_points <= 20 * factor:
             return 'fight'
-        
-        # 5. Moderate points but not terrible — compare card counts as tiebreaker
         if my_points <= 25 * factor:
-            if player.card_count() < caller_cards:
+            if player.card_count() < caller.card_count():
                 return 'fight'
-            if player.card_count() == caller_cards and my_points <= 18 * factor:
+            if player.card_count() == caller.card_count() and my_points <= 18 * factor:
                 return 'fight'
-        
-        # 6. High points — only fight if we suspect caller has even more
         if my_points <= 35 * factor:
-            if player.card_count() < caller_cards - 2:
-                return 'fight'  # Significantly fewer cards = likely lower points
-        
-        # Default: fold if points are genuinely high and no card count advantage
+            if player.card_count() < caller.card_count() - 2:
+                return 'fight'
+
         return 'fold'
 
-    # ─── Discard Logic ───────────────────────────────────────────────
+    # ── discard ──────────────────────────────────────────────────────────────
 
     @staticmethod
     def _do_discard(engine, player):
-        """Discard the most strategic card."""
         if not player.hand:
             return
-        card_to_discard = RuleBasedAI._choose_discard(engine, player)
-        engine.discard_card(player, card_to_discard)
+        card = RuleBasedAI._choose_discard(engine, player)
+        if card:
+            # Record in memory so opponent modeling gets richer over time
+            RuleBasedAI.get_memory(player.name).record_discard(player.name, card)
+            engine.discard_card(player, card)
 
     @staticmethod
     def _choose_discard(engine, player):
         """
-        Smart discard selection:
-        - Penalizes cards that are 'connected' or part of potential melds.
-        - Prioritizes high value cards if they are 'garbage'.
-        - Checks for opponent sapaw safety.
+        Smart discard with memory-aware dead-card bonus.
+        HARD: dead cards (already seen in discard pile) are preferred —
+              safe to throw without giving new information.
         """
         hand = player.hand[:]
-        if not hand: return None
-        if len(hand) == 1: return hand[0]
+        if not hand:
+            return None
+        if len(hand) == 1:
+            return hand[0]
 
-        # Easy bots: 40% chance to discard a random card (making them easier)
-        if getattr(player, 'difficulty', 'MEDIUM') == 'EASY' and random.random() < 0.40:
+        diff = RuleBasedAI._diff(player)
+
+        # Easy bots: 40% random
+        if diff == 'EASY' and random.random() < 0.40:
             return random.choice(hand)
 
+        mem = RuleBasedAI.get_memory(player.name) if diff == 'HARD' else None
         scores = {}
-        for card in hand:
-            # Baseline: higher value = better to discard
-            score = card.value * 2 
-            
-            # 1. Penalty: Part of a full meld (Highest priority to keep)
-            is_in_meld = False
-            for combo in combinations(hand, 3):
-                if card in combo and Meld.is_valid_meld(list(combo)):
-                    is_in_meld = True
-                    break
-            if is_in_meld: score -= 100
 
-            # 2. Penalty: Connectivity (Potential melds)
-            # Check for pairs or near-runs
+        for card in hand:
+            score = card.value * 2
+
+            # 1. Keep cards in melds
+            in_meld = any(
+                card in combo and Meld.is_valid_meld(list(combo))
+                for combo in combinations(hand, 3)
+            )
+            if in_meld:
+                score -= 100
+
+            # 2. Connectivity penalty (keep connected cards)
             connections = 0
             for other in hand:
-                if card == other: continue
-                # Same rank
-                if card.rank == other.rank: connections += 20
-                # Same suit, near rank
+                if card is other:
+                    continue
+                if card.rank == other.rank:
+                    connections += 20
                 if card.suit == other.suit:
                     from .models import RANK_ORDER
                     r1 = RANK_ORDER.index(card.rank)
                     r2 = RANK_ORDER.index(other.rank)
-                    if abs(r1 - r2) == 1: connections += 15 # Consecutive
-                    if abs(r1 - r2) == 2: connections += 10 # Gap of one
-
+                    if abs(r1 - r2) == 1:
+                        connections += 15
+                    elif abs(r1 - r2) == 2:
+                        connections += 10
             score -= connections
 
-            # 3. Penalty: Avoid giving opponents a sapaw
+            # 3. Avoid giving opponents a sapaw
             for tmeld in engine.table_melds:
                 if tmeld.owner != player and tmeld.can_sapaw(card):
-                    score -= 30 # Heavy penalty: don't help others reduce points
+                    score -= 30
 
-            # 4. Bonus: Discarding dangerous high cards early
+            # 4. Early high-card bonus
             if card.value == 10 and engine.deck.remaining() > 30:
-                score += 5 # Get rid of Jacks/Queens/Kings early if not connected
+                score += 5
+
+            # 5. [HARD] Dead-card bonus: safe to discard, adds no info
+            if mem and mem.is_dead(card):
+                score += 20
 
             scores[id(card)] = (score, card)
 
-        # Pick the highest score (the card we want to lose most)
         best_id = max(scores, key=lambda cid: scores[cid][0])
         return scores[best_id][1]

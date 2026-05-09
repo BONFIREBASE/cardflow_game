@@ -2,6 +2,7 @@ import pygame
 import math
 import os
 import json
+import time
 from ui.ui_components import Colors, Button, blur_surface
 from ui.paths import get_resource_path, get_save_path
 
@@ -50,32 +51,68 @@ class DailyQuestModal:
                 border_radius=8
             ))
 
-    def load_progress(self):
-        defaults = [
+    def _get_default_quests(self):
+        return [
             {"id": 1, "desc": "Win 1 Game", "curr": 0, "goal": 1, "reward": 500, "claimed": False, "type": "win"},
             {"id": 2, "desc": "Play 3 Games", "curr": 0, "goal": 3, "reward": 1000, "claimed": False, "type": "play"},
             {"id": 3, "desc": "Reach 3 Win Streak", "curr": 0, "goal": 3, "reward": 2000, "claimed": False, "type": "streak"}
         ]
+
+    def load_progress(self):
+        defaults = self._get_default_quests()
         if os.path.exists(QUEST_FILE):
             try:
                 with open(QUEST_FILE, "r") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                # Handle both old format (list) and new format (dict with timestamp)
+                if isinstance(data, dict):
+                    quests = data.get("quests", defaults)
+                    last_reset = data.get("last_reset", 0)
+                else:
+                    # Old format: just a list of quests, migrate to new format
+                    quests = data
+                    last_reset = 0
+                
+                # Check if daily reset is needed (24 hours = 86400 seconds)
+                now = int(time.time())
+                if now - last_reset >= 86400:
+                    quests = self._get_default_quests()
+                    self._save_with_timestamp(quests, now)
+                    return quests
+                    
+                return quests
             except:
                 return defaults
         return defaults
 
-    def save_progress(self):
+    def _save_with_timestamp(self, quests, timestamp):
+        """Save quests with a reset timestamp."""
         try:
             with open(QUEST_FILE, "w") as f:
-                json.dump(self.quests, f)
+                json.dump({"quests": quests, "last_reset": timestamp}, f)
         except Exception as e:
             print(f"Error saving quests: {e}")
 
+    def save_progress(self):
+        # Load existing timestamp or use current time
+        last_reset = int(time.time())
+        if os.path.exists(QUEST_FILE):
+            try:
+                with open(QUEST_FILE, "r") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    last_reset = data.get("last_reset", last_reset)
+            except:
+                pass
+        self._save_with_timestamp(self.quests, last_reset)
+
     def update_quest(self, quest_type, value):
         for quest in self.quests:
+            if quest["claimed"]:
+                continue  # Skip already claimed quests
             if quest["type"] == quest_type:
                 if quest_type == "streak":
-                    quest["curr"] += value
+                    quest["curr"] = min(quest["goal"], quest["curr"] + value)
                 else:
                     quest["curr"] = min(quest["goal"], quest["curr"] + value)
                     

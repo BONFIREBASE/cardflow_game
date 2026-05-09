@@ -49,6 +49,11 @@ def init_db():
         cursor.execute("ALTER TABLE user_profile ADD COLUMN level INTEGER DEFAULT 1")
     except sqlite3.OperationalError:
         pass
+        
+    try:
+        cursor.execute("ALTER TABLE user_profile ADD COLUMN coins INTEGER DEFAULT 100000")
+    except sqlite3.OperationalError:
+        pass
 
     # Enforce exactly one profile row (ID 1)
     cursor.execute("SELECT id FROM user_profile ORDER BY id ASC")

@@ -133,22 +133,85 @@ class ChipSystem:
         total_per_player = self.main_pot // 3
         player_val = custom_chips if custom_chips else total_per_player
         
-        # Helper to generate randomized chip combinations for bots that sum exactly to total
+        # Helper to generate randomized chip combinations for player/bot bets (visual variety)
         def generate_random_chips(amount):
             import random
-            available_chip_values = [val for val, _ in CHIP_FILE_NAMES]
+            available_chip_values = sorted([val for val, _ in CHIP_FILE_NAMES], reverse=True)
             available = [val for val in available_chip_values if val <= amount]
             if not available: return amount
+            
             chips = []
             remaining = amount
-            while remaining > 0:
-                # Prefer smaller chips for variety but keep it reasonable
-                viable = [v for v in available_chip_values if v <= remaining]
-                if not viable: break
-                c = random.choice(viable)
-                chips.append(c)
-                remaining -= c
+           
+            if available:
+                if len(available) > 1 and random.random() > 0.3:
+                    # 70% chance to start with the second largest chip to force a stack
+                    first = available[1]
+                else:
+                    first = available[0]
+                chips.append(first)
+                remaining -= first
+            
+            # Fill the rest randomly for visual variety
+            while remaining > 0 and len(chips) < 10:
+                pick = random.choice([v for v in available if v <= remaining] or [min(available)])
+                if pick > remaining:
+                    break
+                chips.append(pick)
+                remaining -= pick
+            
+            # If remainder, use greedy fill
+            for val in available_chip_values:
+                while remaining >= val and len(chips) < 12:
+                    chips.append(val)
+                    remaining -= val
+            
             return chips
+        
+        # Greedy chip generation for BANKER POT only — uses high denominations to prevent table clutter
+        def generate_banker_chips(amount):
+            import random
+            # Only use higher denominations (>=100) for the banker pot to keep it compact but add variety
+            banker_denoms = sorted([val for val, _ in CHIP_FILE_NAMES if val >= 100], reverse=True)
+            if not banker_denoms:
+                banker_denoms = sorted([val for val, _ in CHIP_FILE_NAMES], reverse=True)
+            
+            available = [val for val in banker_denoms if val <= amount]
+            if not available: 
+                return [amount]
+                
+            MAX_CHIPS = 8
+            chips = []
+            remaining = amount
+            
+            # Start with the largest possible chip
+            first = available[0]
+            chips.append(first)
+            remaining -= first
+            
+            # Add some random variety for the rest
+            while remaining > 0 and len(chips) < MAX_CHIPS - 2:
+                valid_picks = [v for v in available if v <= remaining]
+                if not valid_picks:
+                    break
+                pick = random.choice(valid_picks)
+                chips.append(pick)
+                remaining -= pick
+                
+            # Fill the rest greedily
+            for val in banker_denoms:
+                while remaining >= val and len(chips) < MAX_CHIPS:
+                    chips.append(val)
+                    remaining -= val
+                    
+            # If still remaining, just add it to the first chip so we don't exceed max count
+            if remaining > 0:
+                if chips:
+                    chips[0] += remaining
+                else:
+                    chips.append(remaining)
+            
+            return chips if chips else [amount]
         
         bot1_val = generate_random_chips(total_per_player)
         bot2_val = generate_random_chips(total_per_player)
@@ -158,7 +221,7 @@ class ChipSystem:
             {'val': bot1_val, 'x': layout['bot1_x'] - 180, 'y': layout['bot1_y'] + 140}, # Bot 1 (farther left from cards, away from banker)
             {'val': bot2_val, 'x': layout['bot2_x'] + 180, 'y': layout['bot2_y'] + 140}  # Bot 2 (farther right from cards, away from banker)
         ]
-        self.banker_pot_display['amount'] = generate_random_chips(self.banker_pot) if self.banker_pot > 0 else 0
+        self.banker_pot_display['amount'] = generate_banker_chips(self.banker_pot) if self.banker_pot > 0 else 0
         
     def reset_main_pot(self):
         self.main_pot = 0

@@ -83,20 +83,19 @@ def generate_bot_profile(bet_limit):
         rp = random.randint(2000, 2999)
     elif rank == "Iron":
         rp = random.randint(1000, 1999)
-    else: # Wood
+    else:  # Wood
         rp = random.randint(0, 999)
 
-    
     # Calculate base XP for the level
     total_xp = 0
     for l in range(1, level):
         req = 1000 if l <= 10 else l * 150
         total_xp += req
-        
+
     # Add random progress within the level
     current_req = 1000 if level <= 10 else level * 150
     total_xp += random.randint(0, current_req - 1)
-    
+
     # Simulate realistic wins and losses based on level
     # Higher level = more games played
     total_games = level * random.randint(5, 15)
@@ -105,16 +104,25 @@ def generate_bot_profile(bet_limit):
     wins = int(total_games * win_rate)
     losses = total_games - wins
 
+    # Assign AI difficulty based on bet limit / room tier
+    if isinstance(bet_limit, str):
+        difficulty = bet_limit.upper()
+    elif bet_limit <= 300:
+        difficulty = "EASY"    # Hitter's Bounty / Aggressive Casino
+    elif bet_limit <= 600:
+        difficulty = "MEDIUM"  # Sustained Economy
+    else:
+        difficulty = "HARD"    # High Stakes, VIP, Legendary (1000+)
+
     profile = {
         "rank": rank,
         "level": level,
         "xp": total_xp,
         "rp": rp,
         "wins": wins,
-        "losses": losses
+        "losses": losses,
+        "difficulty": difficulty
     }
-    if isinstance(bet_limit, str):
-        profile["difficulty"] = bet_limit.upper()
     return profile
 
 

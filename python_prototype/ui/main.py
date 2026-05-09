@@ -3,7 +3,7 @@ from PIL import Image, ImageSequence
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from game.engine import TongItsEngine
-from game.ai_bot import RuleBasedAI
+from game.ai_bot import RuleBasedAI, GameMemory
 from game.models import TurnPhase, GamePhase, Meld as MC, RANK_ORDER
 from ui.animation import (AnimationManager, Animation, Timer, ParticleEmitter,
                            ease_out_cubic, ease_out_back, ease_in_out_quad, linear)
@@ -297,8 +297,6 @@ def main():
     # ΓöÇΓöÇ Profile & Stats Loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     init_db() # Ensure schema is up to date
     profile_data = load_user_profile()
-    profile_data["coins"] = 1000000
-    save_user_profile(profile_data)
     player_name = profile_data["name"]
     p_av_idx = profile_data["avatar_idx"]
     player_stats = {
@@ -311,6 +309,10 @@ def main():
         "level": profile_data.get("level", 1),
         "rp": profile_data.get("rp", 0)
     }
+
+    # --- Lobby Coin Notification System ---
+    coins_before_match = player_stats["coins"]  # Track coins before entering a match
+    lobby_coin_notif = None  # {amount, timer, x, y, target_x, target_y, alpha}
 
 
     # ΓöÇΓöÇ Engine ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -430,7 +432,13 @@ def main():
     music_dir = os.path.join(assets_dir, "music")
     sfx_dir = os.path.join(assets_dir, "sfx")
     MUSIC_LOBBY = os.path.join(music_dir, "Masakit na BG.mp3")
-    MUSIC_INGAME = os.path.join(music_dir, "Moavii - Downtown (ingame).mp3")
+    # Ingame music pool for rotation
+    INGAME_TRACKS = [
+        os.path.join(music_dir, "Moavii - Downtown (ingame).mp3"),
+        os.path.join(music_dir, "Avanti - Chance Of Sunshine (ingame).mp3"),
+    ]
+    INGAME_TRACKS = [t for t in INGAME_TRACKS if os.path.exists(t)]  # Only keep existing files
+    MUSIC_INGAME = INGAME_TRACKS[0] if INGAME_TRACKS else os.path.join(music_dir, "Moavii - Downtown (ingame).mp3")
     
     SOUND_LOBBY = None
     if os.path.exists(MUSIC_LOBBY):
@@ -546,30 +554,75 @@ def main():
 
     current_music = None
     lobby_music_started = False
+    lobby_music_paused = False  # Tracks whether Channel 7 is currently paused (not stopped)
+    
+    MUSIC_END_EVENT = pygame.USEREVENT + 1
+    pygame.mixer.music.set_endevent(MUSIC_END_EVENT)
+    
     def play_music(track_path):
-        nonlocal current_music, lobby_music_started
+        nonlocal current_music, lobby_music_started, lobby_music_paused, MUSIC_INGAME
+        if track_path == "NEXT":
+            # Find a different track if possible
+            pool = [t for t in INGAME_TRACKS if t != current_music]
+            if not pool: pool = INGAME_TRACKS
+            if not pool: return
+            track_path = random.choice(pool)
+            MUSIC_INGAME = track_path
+        elif track_path != MUSIC_LOBBY and INGAME_TRACKS:
+            # Pick a random ingame track
+            track_path = random.choice(INGAME_TRACKS)
+            MUSIC_INGAME = track_path
+            
         if not os.path.exists(track_path):
             return
-        if current_music == track_path:
+            
+        if current_music == track_path and pygame.mixer.music.get_busy():
             return
         current_music = track_path
         try:
             if track_path == MUSIC_LOBBY:
-                pygame.mixer.music.stop() # Stop ingame music
+                pygame.mixer.music.stop()  # Stop ingame music (pygame.mixer.music channel)
                 if SOUND_LOBBY:
                     if not lobby_music_started:
+                        # First ever play — start from beginning
                         pygame.mixer.Channel(7).play(SOUND_LOBBY, loops=-1)
                         lobby_music_started = True
-                    else:
+                        lobby_music_paused = False
+                    elif lobby_music_paused:
+                        # Was paused when we went ingame — resume from exact position
                         pygame.mixer.Channel(7).unpause()
-            else: # Ingame music
-                if SOUND_LOBBY:
+                        lobby_music_paused = False
+                    # else: already playing, do nothing (avoid restart)
+            else:  # Ingame music
+                if SOUND_LOBBY and lobby_music_started and not lobby_music_paused:
+                    # Only pause if currently playing (not already paused)
                     pygame.mixer.Channel(7).pause()
+                    lobby_music_paused = True
                 pygame.mixer.music.load(track_path)
                 pygame.mixer.music.set_volume(0.3)
-                pygame.mixer.music.play(-1)
+                pygame.mixer.music.play(1)  # Play once so we get MUSIC_END_EVENT
         except Exception as e:
             print(f"Music error: {e}")
+
+    # --- Audio Settings Persistence ---
+    SETTINGS_FILE = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "db")), "settings.json")
+    saved_bgm_vol = 1.0
+    saved_sfx_vol = 1.0
+    try:
+        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r") as f:
+                _sdata = json.load(f)
+                saved_bgm_vol = _sdata.get("bgm_volume", 1.0)
+                saved_sfx_vol = _sdata.get("sfx_volume", 1.0)
+    except: pass
+
+    def _save_audio_settings(bgm_vol, sfx_vol):
+        try:
+            os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+            with open(SETTINGS_FILE, "w") as f:
+                json.dump({"bgm_volume": bgm_vol, "sfx_volume": sfx_vol}, f)
+        except: pass
 
     def set_sfx_volume(volume_factor):
         if SFX_SHUFFLE: SFX_SHUFFLE.set_volume(0.6 * volume_factor)
@@ -585,12 +638,22 @@ def main():
         if SFX_TURN_END: SFX_TURN_END.set_volume(0.6 * volume_factor)
         if SFX_ALL_IN: SFX_ALL_IN.set_volume(0.8 * volume_factor)
         if SFX_CLICK: SFX_CLICK.set_volume(0.6 * volume_factor)
+        _save_audio_settings(settings_modal.bgm_volume if hasattr(settings_modal, 'bgm_volume') else saved_bgm_vol, volume_factor)
 
     def set_bgm_volume(volume_factor):
         pygame.mixer.music.set_volume(0.3 * volume_factor)
         pygame.mixer.Channel(7).set_volume(0.3 * volume_factor)
+        _save_audio_settings(volume_factor, settings_modal.sfx_volume if hasattr(settings_modal, 'sfx_volume') else saved_sfx_vol)
 
     settings_modal = SettingsModal(font_title, font_body, font_small, set_bgm_volume, set_sfx_volume)
+    # Apply saved volumes on startup
+    settings_modal.bgm_volume = saved_bgm_vol
+    settings_modal.sfx_volume = saved_sfx_vol
+    set_bgm_volume(saved_bgm_vol)
+    set_sfx_volume(saved_sfx_vol)
+    # Sync ingame menu toggles with saved state
+    ingame_menu.sound_on = (saved_sfx_vol > 0.01)
+    ingame_menu.bgm_on = (saved_bgm_vol > 0.01)
 
     # Initial music playback
     play_music(MUSIC_LOBBY)
@@ -612,6 +675,7 @@ def main():
         nonlocal game_over_overlay, fight_resolution_overlay, turn_timer, last_turn_state, meld_hit_zones
         nonlocal current_bet_amount, post_game_floats, current_bet_chips, bot_bet_timer, bot_bet_chips, bet_outro_timer, target_bet_limit
         nonlocal current_music, play_music, MUSIC_INGAME, MUSIC_LOBBY, tick_played, all_bets_announced
+        nonlocal coins_before_match, lobby_coin_notif
         
         tick_played = False
         all_bets_announced = False
@@ -619,8 +683,28 @@ def main():
 
         if target_state == 'lobby':
             play_music(MUSIC_LOBBY)
+            # Calculate coin change and trigger lobby notification
+            coin_diff = player_stats["coins"] - coins_before_match
+            if coin_diff != 0:
+                lobby_coin_notif = {
+                    'amount': coin_diff,
+                    'timer': 0.0,
+                    'duration': 3.5,
+                    'x': WIDTH // 2,
+                    'y': HEIGHT // 2 - 50,
+                    'target_x': 140,  # Currency display position
+                    'target_y': 40,
+                    'alpha': 255,
+                    'scale': 1.5
+                }
+            coins_before_match = player_stats["coins"]  # Reset tracker
         else:
             play_music(MUSIC_INGAME)
+            if not is_play_again:
+                coins_before_match = player_stats["coins"]  # Snapshot before match
+            # Tick session memory round counter for both bots
+            for _bn in [bot1_info[0], bot2_info[0]]:
+                RuleBasedAI.get_memory(_bn).new_round()
         bot_bet_chips = {1: [], 2: []}
         bet_outro_timer = 0.0
         # Dealer Logic: Winner deals next. Randomize only if fresh start.
@@ -816,6 +900,8 @@ def main():
         # ΓöÇΓöÇ SPLASH SCREEN ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if game_state == 'splashscreen':
             for event in pygame.event.get():
+                if event.type == MUSIC_END_EVENT:
+                    play_music("NEXT")
                 if event.type == pygame.QUIT:
                     running = False
                     
@@ -857,6 +943,73 @@ def main():
             lobby.update(dt, mouse_pos)
             lobby.draw(screen, player_name, current_avatar, player_stats, lobby_bkg)
             lobby_particles.draw(screen)
+
+            # --- Lobby Coin Notification (Floating coin change indicator) ---
+            if lobby_coin_notif:
+                n = lobby_coin_notif
+                n['timer'] += dt
+                progress = min(n['timer'] / n['duration'], 1.0)
+                
+                if progress < 0.3:
+                    # Phase 1: Appear and hold in center (large text)
+                    phase_p = progress / 0.3
+                    n['alpha'] = int(255 * min(phase_p * 2, 1.0))
+                    n['scale'] = 1.5 - 0.3 * phase_p
+                    draw_x = n['x']
+                    draw_y = n['y']
+                elif progress < 0.8:
+                    # Phase 2: Float toward currency display
+                    phase_p = (progress - 0.3) / 0.5
+                    ease_p = 1 - (1 - phase_p) ** 3  # ease out cubic
+                    draw_x = n['x'] + (n['target_x'] - n['x']) * ease_p
+                    draw_y = n['y'] + (n['target_y'] - n['y']) * ease_p
+                    n['scale'] = 1.2 - 0.6 * phase_p
+                    n['alpha'] = 255
+                else:
+                    # Phase 3: Fade out at target
+                    phase_p = (progress - 0.8) / 0.2
+                    draw_x = n['target_x']
+                    draw_y = n['target_y']
+                    n['scale'] = 0.6
+                    n['alpha'] = int(255 * (1.0 - phase_p))
+                
+                if progress >= 1.0:
+                    lobby_coin_notif = None
+                else:
+                    amt = n['amount']
+                    if amt > 0:
+                        txt_str = f"+{amt:,}"
+                        txt_color = (80, 255, 80)
+                        glow_color = (0, 200, 0, 60)
+                    else:
+                        txt_str = f"{amt:,}"
+                        txt_color = (255, 80, 80)
+                        glow_color = (200, 0, 0, 60)
+                    
+                    # Scale the font
+                    font_size = max(16, int(28 * n['scale']))
+                    try:
+                        notif_font = pygame.font.Font(get_resource_path(os.path.join("assets", "fonts", "Sekuya", "Sekuya-Regular.ttf")), font_size)
+                    except:
+                        notif_font = font_title
+                    
+                    txt_surf = notif_font.render(txt_str, True, txt_color)
+                    txt_surf.set_alpha(n['alpha'])
+                    
+                    # Draw glow behind text
+                    glow_size = txt_surf.get_width() + 40
+                    glow_surf = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
+                    pygame.draw.circle(glow_surf, glow_color, (glow_size // 2, glow_size // 2), glow_size // 2)
+                    glow_surf.set_alpha(n['alpha'] // 2)
+                    screen.blit(glow_surf, (int(draw_x) - glow_size // 2, int(draw_y) - glow_size // 2))
+                    
+                    # Draw shadow
+                    shadow_surf = notif_font.render(txt_str, True, (0, 0, 0))
+                    shadow_surf.set_alpha(n['alpha'] // 2)
+                    screen.blit(shadow_surf, (int(draw_x) - txt_surf.get_width() // 2 + 2, int(draw_y) - txt_surf.get_height() // 2 + 2))
+                    
+                    # Draw main text
+                    screen.blit(txt_surf, (int(draw_x) - txt_surf.get_width() // 2, int(draw_y) - txt_surf.get_height() // 2))
 
             # Update and Draw Profile Modal on top
             if profile_modal.active:
@@ -908,6 +1061,9 @@ def main():
 
 
             for event in pygame.event.get():
+                if event.type == MUSIC_END_EVENT:
+                    if game_state != 'lobby':  # Only rotate ingame tracks when not in lobby
+                        play_music("NEXT")
                 if event.type == pygame.QUIT:
                     def confirm_quit_window():
                         nonlocal running
@@ -943,16 +1099,15 @@ def main():
                                 start_new_game(target_state='lobby')
                             
                             confirmation_modal.open(
-                                "Are you sure you want to leave?",
-                                "You will lose XP and RP as a penalty!",
-                                on_confirm=confirm_leave
+                                "Are you sure you want to leave? You will lose XP and RP as a penalty!",
+                                confirm_leave
                             )
                         else:
                             start_new_game(target_state='lobby')
                     elif res == "toggle_sound":
-                        set_sfx_volume(1.0 if ingame_menu.sound_on else 0.0)
+                        set_sfx_volume(settings_modal.sfx_volume if ingame_menu.sound_on else 0.0)
                     elif res == "toggle_bgm":
-                        set_bgm_volume(1.0 if ingame_menu.bgm_on else 0.0)
+                        set_bgm_volume(settings_modal.bgm_volume if ingame_menu.bgm_on else 0.0)
                     continue
 
                 if reward_modal.active:
@@ -969,7 +1124,8 @@ def main():
                                 player_stats["coins"] += amt
                                 profile_data["coins"] = player_stats["coins"]
                                 save_user_profile(profile_data)
-                                if SFX_CHIPS: SFX_CHIPS.play()
+                                print(f"[QUEST CLAIM] +{amt} coins | New balance: {player_stats['coins']}")
+                                if SFX_TURN_END: SFX_TURN_END.play()
                     continue
 
                 # --- Rules Modal Interception ---
@@ -1150,6 +1306,8 @@ def main():
                             if SFX_CHIPS: SFX_CHIPS.play()
             
             for ev in pygame.event.get():
+                if ev.type == MUSIC_END_EVENT:
+                    play_music("NEXT")
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE:
                     on_resize(ev.w, ev.h)
@@ -1283,6 +1441,8 @@ def main():
                 if SFX_SHUFFLE: SFX_SHUFFLE.play()
                 
             for ev in pygame.event.get():
+                if ev.type == MUSIC_END_EVENT:
+                    play_music("NEXT")
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE: on_resize(ev.w, ev.h)
 
@@ -1385,6 +1545,8 @@ def main():
                 if SFX_SHUFFLE: SFX_SHUFFLE.stop()
                 if SFX_DEAL: SFX_DEAL.play()
             for ev in pygame.event.get():
+                if ev.type == MUSIC_END_EVENT:
+                    play_music("NEXT")
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE:
                     on_resize(ev.w, ev.h)
@@ -1524,6 +1686,8 @@ def main():
                 game_state = 'dealer_discard'; flying_cards.clear()
                 if SFX_DEAL: SFX_DEAL.fadeout(500)
             for ev in pygame.event.get():
+                if ev.type == MUSIC_END_EVENT:
+                    play_music("NEXT")
                 if ev.type == pygame.QUIT: running = False
                 elif ev.type == pygame.VIDEORESIZE:
                     on_resize(ev.w, ev.h)
@@ -1824,6 +1988,8 @@ def main():
 
         # ΓöÇΓöÇ Events ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         for event in pygame.event.get():
+            if event.type == MUSIC_END_EVENT:
+                play_music("NEXT")
             if event.type == pygame.QUIT: running = False
             elif event.type == pygame.VIDEORESIZE:
                 on_resize(event.w, event.h)
@@ -1834,6 +2000,12 @@ def main():
                     profile_inspect_overlay.hide()
                 if event.type != pygame.VIDEORESIZE:
                     continue
+
+            # --- Confirmation Modal Interception ---
+            if confirmation_modal.is_open:
+                if confirmation_modal.handle_event(event):
+                    pass
+                continue
 
             # --- In-Game Menu Interception ---
             if ingame_menu.is_open:
@@ -1846,16 +2018,15 @@ def main():
                             start_new_game(target_state='lobby')
                         
                         confirmation_modal.open(
-                            "Are you sure you want to leave?",
-                            "You will lose XP and RP as a penalty!",
-                            on_confirm=confirm_leave
+                            "Are you sure you want to leave? You will lose XP and RP as a penalty!",
+                            confirm_leave
                         )
                     else:
                         start_new_game(target_state='lobby')
                 elif res == "toggle_sound":
-                    set_sfx_volume(1.0 if ingame_menu.sound_on else 0.0)
+                    set_sfx_volume(settings_modal.sfx_volume if ingame_menu.sound_on else 0.0)
                 elif res == "toggle_bgm":
-                    set_bgm_volume(1.0 if ingame_menu.bgm_on else 0.0)
+                    set_bgm_volume(settings_modal.bgm_volume if ingame_menu.bgm_on else 0.0)
                 continue
 
             # Toggle In-Game Menu with ESC
@@ -1887,6 +2058,7 @@ def main():
                     player_rect = pygame.Rect(WIDTH//2 - pw//2, HEIGHT-68, pw, ph)
                     bot1_rect = pygame.Rect(layout['bot1_x'] - pw//2, layout['bot1_y'] - 45, pw, ph)
                     bot2_rect = pygame.Rect(layout['bot2_x'] - pw//2, layout['bot2_y'] - 45, pw, ph)
+
 
                     if player_rect.collidepoint(event.pos):
                         current_time = pygame.time.get_ticks()
