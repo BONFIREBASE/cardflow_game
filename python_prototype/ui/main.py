@@ -21,6 +21,8 @@ from ui.dealer import DealerManager
 from ui.chips import ChipSystem
 from ui.progression_manager import generate_bot_profile, apply_rewards, get_match_rewards, apply_leaver_penalty
 from ui.paths import get_resource_path
+from ui.security import run_security_checks, CRITICAL_FILES
+from ui.database import DB_PATH
 
 
 # --- Gendered Identity Pools ---
@@ -317,7 +319,7 @@ def main():
     font_btn = load_font("Inter_18pt-SemiBold", 18)
     font_phase = load_font("JetBrainsMono", 16)
     
-    # ΓöÇΓöÇ Profile & Stats Loading ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Profile & Stats Loading ───────────────────────────────────────
     init_db() # Ensure schema is up to date
     profile_data = load_user_profile()
     player_name = profile_data["name"]
@@ -332,6 +334,21 @@ def main():
         "level": profile_data.get("level", 1),
         "rp": profile_data.get("rp", 0)
     }
+
+    # ── SECURITY: Run startup checks ──────────────────────────────────
+    _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    _security_results = run_security_checks(_project_root, DB_PATH, profile_data)
+    if _security_results['issues']:
+        for _issue in _security_results['issues']:
+            print(f"[Security] {_issue}")
+    if not _security_results['save_valid']:
+        # Reload the reset profile (tampered data was already reset by database.py)
+        profile_data = load_user_profile()
+        player_stats["coins"] = profile_data["coins"]
+        player_stats["rank"] = profile_data["rank"]
+        player_stats["wins"] = profile_data["wins"]
+        player_stats["losses"] = profile_data["losses"]
+        print("[Security] Profile has been reset due to data tampering.")
 
     # --- Lobby Coin Notification System ---
     coins_before_match = player_stats["coins"]  # Track coins before entering a match

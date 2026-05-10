@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from ui.paths import get_save_path
+from ui.security import verify_save_data, on_save as security_sign_save
 
 DB_PATH = get_save_path("user_profile.db")
 
@@ -124,6 +125,13 @@ def load_user_profile():
             for k, v in defaults.items():
                 if k not in data:
                     data[k] = v
+
+            # ── SECURITY: Verify save data integrity ──
+            if not verify_save_data(data, DB_PATH):
+                print("[Security] ⚠ Save data tampering detected! Resetting profile.")
+                data = defaults.copy()
+                save_user_profile(data)  # Reset and re-sign
+
             return data
     except Exception as e:
         print(f"Database load error: {e}")
@@ -198,5 +206,9 @@ def save_user_profile(stats_dict):
             
         conn.commit()
         conn.close()
+
+        # ── SECURITY: Sign the save data after writing ──
+        security_sign_save(stats_dict, DB_PATH)
+
     except Exception as e:
         print(f"Database save error: {e}")
