@@ -5,7 +5,7 @@ RANKS = ["Wood", "Iron", "Bronze", "Silver", "Gold", "Immortal"]
 
 def get_match_rewards(is_win, is_tongits=False, bet_limit=100):
     """Returns (xp, rp) based on match result and bet limit."""
-    # Calculate RP multiplier based on bet limit or difficulty
+    
     if isinstance(bet_limit, str):
         if bet_limit == "EASY":
             mult = 1.0

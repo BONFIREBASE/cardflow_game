@@ -451,7 +451,7 @@ class SettingsModal:
             self._draw_legal_tab(modal_surf, cx, content_y)
 
         # Version - bottom right
-        version_surf = self.font_small.render("v1.0.1", True, (100, 105, 120))
+        version_surf = self.font_small.render("v1.0.2", True, (100, 105, 120))
         modal_surf.blit(version_surf, (self.rect.w - version_surf.get_width() - 30, self.rect.h - version_surf.get_height() - 18))
 
         # Blit modal to screen
