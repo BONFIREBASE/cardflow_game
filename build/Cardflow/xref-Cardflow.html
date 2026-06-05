@@ -18,10 +18,7 @@
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/main.py" type="text/plain"><tt>main.py</tt></a>
 <span class="moduletype">Script</span>  <div class="import">
 imports:
-    <a href="#PIL">PIL</a>
- &#8226;   <a href="#PIL.Image">PIL.Image</a>
- &#8226;   <a href="#PIL.ImageSequence">PIL.ImageSequence</a>
- &#8226;   <a href="#_collections_abc">_collections_abc</a>
+    <a href="#_collections_abc">_collections_abc</a>
  &#8226;   <a href="#_weakrefset">_weakrefset</a>
  &#8226;   <a href="#abc">abc</a>
  &#8226;   <a href="#codecs">codecs</a>
@@ -155,6 +152,7 @@ imports:
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#game.ai_bot">game.ai_bot</a>
  &#8226;   <a href="#game.betting_configs">game.betting_configs</a>
+ &#8226;   <a href="#game.economy">game.economy</a>
  &#8226;   <a href="#game.engine">game.engine</a>
  &#8226;   <a href="#game.models">game.models</a>
  &#8226;   <a href="#genericpath">genericpath</a>
@@ -190,13 +188,20 @@ imports:
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#types">types</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.animation">ui.animation</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
+ &#8226;   <a href="#ui.bot_executor">ui.bot_executor</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.confirmation_modal">ui.confirmation_modal</a>
  &#8226;   <a href="#ui.database">ui.database</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.ingame_menu">ui.ingame_menu</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
@@ -205,6 +210,7 @@ imports:
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
  &#8226;   <a href="#warnings">warnings</a>
  &#8226;   <a href="#weakref">weakref</a>
@@ -540,7 +546,7 @@ imported by:
  &#8226;   <a href="#PIL._version">PIL._version</a>
  &#8226;   <a href="#PIL._webp">PIL._webp</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
 
   </div>
 
@@ -1221,7 +1227,7 @@ imported by:
  &#8226;   <a href="#PIL.XbmImagePlugin">PIL.XbmImagePlugin</a>
  &#8226;   <a href="#PIL.XpmImagePlugin">PIL.XpmImagePlugin</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
 
   </div>
 
@@ -1561,7 +1567,7 @@ imported by:
  &#8226;   <a href="#PIL.MpoImagePlugin">PIL.MpoImagePlugin</a>
  &#8226;   <a href="#PIL.PdfImagePlugin">PIL.PdfImagePlugin</a>
  &#8226;   <a href="#PIL.PngImagePlugin">PIL.PngImagePlugin</a>
- &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
 
   </div>
 
@@ -5897,6 +5903,7 @@ imported by:
  &#8226;   <a href="#doctest">doctest</a>
  &#8226;   <a href="#email.feedparser">email.feedparser</a>
  &#8226;   <a href="#functools">functools</a>
+ &#8226;   <a href="#game.models">game.models</a>
  &#8226;   <a href="#importlib.metadata">importlib.metadata</a>
  &#8226;   <a href="#importlib.metadata._collections">importlib.metadata._collections</a>
  &#8226;   <a href="#importlib.resources.readers">importlib.resources.readers</a>
@@ -6457,6 +6464,7 @@ imported by:
  &#8226;   <a href="#numpy.ctypeslib._ctypeslib">numpy.ctypeslib._ctypeslib</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#psutil._common">psutil._common</a>
+ &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#webbrowser">webbrowser</a>
 
   </div>
@@ -6632,6 +6640,7 @@ imports:
 imported by:
     <a href="#ctypes">ctypes</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
+ &#8226;   <a href="#ui.security">ui.security</a>
 
   </div>
 
@@ -10114,6 +10123,7 @@ imported by:
 imported by:
     <a href="#game.ai_bot">game.ai_bot</a>
  &#8226;   <a href="#game.betting_configs">game.betting_configs</a>
+ &#8226;   <a href="#game.economy">game.economy</a>
  &#8226;   <a href="#game.engine">game.engine</a>
  &#8226;   <a href="#game.models">game.models</a>
 
@@ -10135,6 +10145,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.bot_executor">ui.bot_executor</a>
 
   </div>
 
@@ -10151,8 +10162,28 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#main.py">main.py</a>
+    <a href="#game.economy">game.economy</a>
+ &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="game.economy"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/game/economy.py" type="text/plain"><tt>game.economy</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#game">game</a>
+ &#8226;   <a href="#game.betting_configs">game.betting_configs</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
 
   </div>
 
@@ -10181,7 +10212,8 @@ imported by:
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/game/models.py" type="text/plain"><tt>game.models</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#enum">enum</a>
+    <a href="#collections">collections</a>
+ &#8226;   <a href="#enum">enum</a>
  &#8226;   <a href="#game">game</a>
  &#8226;   <a href="#itertools">itertools</a>
  &#8226;   <a href="#random">random</a>
@@ -10192,6 +10224,7 @@ imported by:
     <a href="#game.ai_bot">game.ai_bot</a>
  &#8226;   <a href="#game.engine">game.engine</a>
  &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.bot_executor">ui.bot_executor</a>
 
   </div>
 
@@ -10371,6 +10404,7 @@ imported by:
     <a href="#charset_normalizer.models">charset_normalizer.models</a>
  &#8226;   <a href="#hmac">hmac</a>
  &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#urllib.request">urllib.request</a>
 
@@ -10415,6 +10449,7 @@ imports:
 imported by:
     <a href="#multiprocessing.connection">multiprocessing.connection</a>
  &#8226;   <a href="#secrets">secrets</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.security">ui.security</a>
 
   </div>
@@ -11397,6 +11432,8 @@ imported by:
  &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
  &#8226;   <a href="#pdb">pdb</a>
  &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.security">ui.security</a>
 
@@ -11647,15 +11684,18 @@ imported by:
  &#8226;   <a href="#reprlib">reprlib</a>
  &#8226;   <a href="#selectors">selectors</a>
  &#8226;   <a href="#statistics">statistics</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.animation">ui.animation</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.reward_modal">ui.reward_modal</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
  &#8226;   <a href="#urllib.parse">urllib.parse</a>
 
@@ -19500,18 +19540,25 @@ imported by:
  &#8226;   <a href="#threading">threading</a>
  &#8226;   <a href="#tkinter">tkinter</a>
  &#8226;   <a href="#tkinter.filedialog">tkinter.filedialog</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.confirmation_modal">ui.confirmation_modal</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.database">ui.database</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
  &#8226;   <a href="#unittest.loader">unittest.loader</a>
  &#8226;   <a href="#unittest.main">unittest.main</a>
  &#8226;   <a href="#urllib.request">urllib.request</a>
@@ -20251,18 +20298,24 @@ imported by:
  &#8226;   <a href="#pygame.typing">pygame.typing</a>
  &#8226;   <a href="#pygame.version">pygame.version</a>
  &#8226;   <a href="#pygame.window">pygame.window</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.animation">ui.animation</a>
  &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.confirmation_modal">ui.confirmation_modal</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.ingame_menu">ui.ingame_menu</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.reward_modal">ui.reward_modal</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
 
   </div>
@@ -21321,9 +21374,11 @@ imported by:
  &#8226;   <a href="#statistics">statistics</a>
  &#8226;   <a href="#tempfile">tempfile</a>
  &#8226;   <a href="#ui.animation">ui.animation</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
  &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
  &#8226;   <a href="#ui.reward_modal">ui.reward_modal</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
@@ -22244,6 +22299,7 @@ imported by:
  &#8226;   <a href="#psutil">psutil</a>
  &#8226;   <a href="#pygame.sysfont">pygame.sysfont</a>
  &#8226;   <a href="#pyi_rth_multiprocessing.py">pyi_rth_multiprocessing.py</a>
+ &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#webbrowser">webbrowser</a>
 
   </div>
@@ -22733,6 +22789,8 @@ imported by:
  &#8226;   <a href="#subprocess">subprocess</a>
  &#8226;   <a href="#tarfile">tarfile</a>
  &#8226;   <a href="#threading">threading</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.animation">ui.animation</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
@@ -23316,14 +23374,23 @@ imported by:
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/__init__.py" type="text/plain"><tt>ui</tt></a>
 <span class="moduletype">Package</span>  <div class="import">
 imported by:
-    <a href="#ui.animation">ui.animation</a>
+    <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
+ &#8226;   <a href="#ui.animation">ui.animation</a>
  &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
+ &#8226;   <a href="#ui.bot_executor">ui.bot_executor</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
  &#8226;   <a href="#ui.chips">ui.chips</a>
  &#8226;   <a href="#ui.confirmation_modal">ui.confirmation_modal</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.database">ui.database</a>
  &#8226;   <a href="#ui.dealer">ui.dealer</a>
  &#8226;   <a href="#ui.ingame_menu">ui.ingame_menu</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
@@ -23332,7 +23399,54 @@ imported by:
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.security">ui.security</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.achievement_manager"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/achievement_manager.py" type="text/plain"><tt>ui.achievement_manager</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
+ &#8226;   <a href="#ui.paths">ui.paths</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#ui.achievement_modal">ui.achievement_modal</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
+ &#8226;   <a href="#ui.profile">ui.profile</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.achievement_modal"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/achievement_modal.py" type="text/plain"><tt>ui.achievement_modal</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#math">math</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.paths">ui.paths</a>
+ &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
 
   </div>
 
@@ -23353,6 +23467,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.bot_executor">ui.bot_executor</a>
 
   </div>
 
@@ -23371,8 +23486,70 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#ui.profile">ui.profile</a>
+    <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.audio_manager"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/audio_manager.py" type="text/plain"><tt>ui.audio_manager</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.bot_executor"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/bot_executor.py" type="text/plain"><tt>ui.bot_executor</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#game.ai_bot">game.ai_bot</a>
+ &#8226;   <a href="#game.models">game.models</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.animation">ui.animation</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.card_helpers"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/card_helpers.py" type="text/plain"><tt>ui.card_helpers</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#PIL.ImageSequence">PIL.ImageSequence</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
 
   </div>
 
@@ -23418,6 +23595,28 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="ui.crypto_utils"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/crypto_utils.py" type="text/plain"><tt>ui.crypto_utils</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#hashlib">hashlib</a>
+ &#8226;   <a href="#hmac">hmac</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#ui">ui</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.audio_manager">ui.audio_manager</a>
+ &#8226;   <a href="#ui.database">ui.database</a>
+ &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="ui.database"></a>
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/database.py" type="text/plain"><tt>ui.database</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -23425,6 +23624,7 @@ imports:
     <a href="#os">os</a>
  &#8226;   <a href="#sqlite3">sqlite3</a>
  &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.security">ui.security</a>
 
@@ -23432,6 +23632,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
  &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
 
   </div>
@@ -23485,8 +23687,72 @@ imports:
  &#8226;   <a href="#pygame">pygame</a>
  &#8226;   <a href="#random">random</a>
  &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.match_history"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/match_history.py" type="text/plain"><tt>ui.match_history</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#math">math</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.database">ui.database</a>
+ &#8226;   <a href="#ui.paths">ui.paths</a>
+ &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.match_result"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/match_result.py" type="text/plain"><tt>ui.match_result</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#game.betting_configs">game.betting_configs</a>
+ &#8226;   <a href="#game.economy">game.economy</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.database">ui.database</a>
+ &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="ui.npc_manager"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/npc_manager.py" type="text/plain"><tt>ui.npc_manager</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.progression_manager">ui.progression_manager</a>
 
   </div>
   <div class="import">
@@ -23510,14 +23776,18 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
  &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
  &#8226;   <a href="#ui.confirmation_modal">ui.confirmation_modal</a>
  &#8226;   <a href="#ui.database">ui.database</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
 
   </div>
 
@@ -23535,6 +23805,7 @@ imports:
  &#8226;   <a href="#tkinter">tkinter</a>
  &#8226;   <a href="#tkinter.filedialog">tkinter.filedialog</a>
  &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.achievement_manager">ui.achievement_manager</a>
  &#8226;   <a href="#ui.assets_mgr">ui.assets_mgr</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
@@ -23561,6 +23832,8 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.match_result">ui.match_result</a>
+ &#8226;   <a href="#ui.npc_manager">ui.npc_manager</a>
 
   </div>
 
@@ -23577,6 +23850,7 @@ imports:
  &#8226;   <a href="#pygame">pygame</a>
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.crypto_utils">ui.crypto_utils</a>
  &#8226;   <a href="#ui.paths">ui.paths</a>
  &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
 
@@ -23637,10 +23911,13 @@ imported by:
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/security.py" type="text/plain"><tt>ui.security</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#hashlib">hashlib</a>
+    <a href="#ctypes">ctypes</a>
+ &#8226;   <a href="#ctypes.wintypes">ctypes.wintypes</a>
+ &#8226;   <a href="#hashlib">hashlib</a>
  &#8226;   <a href="#hmac">hmac</a>
  &#8226;   <a href="#json">json</a>
  &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#subprocess">subprocess</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#ui">ui</a>
@@ -23677,6 +23954,27 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="ui.tutorial_modal"></a>
+  <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/tutorial_modal.py" type="text/plain"><tt>ui.tutorial_modal</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#math">math</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#ui">ui</a>
+ &#8226;   <a href="#ui.paths">ui.paths</a>
+ &#8226;   <a href="#ui.ui_components">ui.ui_components</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="ui.ui_components"></a>
   <a target="code" href="///C:/Users/Project/cardflow_game/python_prototype/ui/ui_components.py" type="text/plain"><tt>ui.ui_components</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -23691,12 +23989,16 @@ imports:
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#ui.achievement_modal">ui.achievement_modal</a>
+ &#8226;   <a href="#ui.card_helpers">ui.card_helpers</a>
  &#8226;   <a href="#ui.lobby">ui.lobby</a>
+ &#8226;   <a href="#ui.match_history">ui.match_history</a>
  &#8226;   <a href="#ui.profile">ui.profile</a>
  &#8226;   <a href="#ui.quest_modal">ui.quest_modal</a>
  &#8226;   <a href="#ui.reward_modal">ui.reward_modal</a>
  &#8226;   <a href="#ui.rules_modal">ui.rules_modal</a>
  &#8226;   <a href="#ui.settings_modal">ui.settings_modal</a>
+ &#8226;   <a href="#ui.tutorial_modal">ui.tutorial_modal</a>
 
   </div>
 

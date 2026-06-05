@@ -2,8 +2,18 @@ import sqlite3
 import os
 from ui.paths import get_save_path
 from ui.security import verify_save_data, on_save as security_sign_save
+from ui.crypto_utils import encrypt_path, decrypt_path
 
 DB_PATH = get_save_path("user_profile.db")
+_SIG_PATH = os.path.join(os.path.dirname(DB_PATH), "profile.sig")
+
+def _decrypt_saves():
+    decrypt_path(DB_PATH)
+    decrypt_path(_SIG_PATH)
+
+def _encrypt_saves():
+    encrypt_path(DB_PATH)
+    encrypt_path(_SIG_PATH)
 
 def init_db():
     """Initializes the SQLite database and migrates data if necessary."""
@@ -11,6 +21,7 @@ def init_db():
     if not os.path.exists(db_dir):
         os.makedirs(db_dir)
 
+    _decrypt_saves()
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
@@ -77,7 +88,12 @@ def init_db():
         pass
 
     try:
-        cursor.execute("ALTER TABLE user_profile ADD COLUMN coins INTEGER DEFAULT 100000")
+        cursor.execute("ALTER TABLE user_profile ADD COLUMN coins INTEGER DEFAULT 10000")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE user_profile ADD COLUMN tutorial_seen INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
 
@@ -88,8 +104,8 @@ def init_db():
     if not rows:
         # Create the single mandatory profile row
         cursor.execute('''
-            INSERT INTO user_profile (id, name, avatar_idx, wins, losses, coins, rank, rp, xp, level, last_replenish, streak, biggest_win)
-            VALUES (1, 'Player', 0, 0, 0, 100000, 'Wood', 0, 0, 1, 0, 0, 0)
+            INSERT INTO user_profile (id, name, avatar_idx, wins, losses, coins, rank, rp, xp, level, last_replenish, streak, biggest_win, tutorial_seen)
+            VALUES (1, 'Player', 0, 0, 0, 10000, 'Wood', 0, 0, 1, 0, 0, 0, 0)
         ''')
         conn.commit()
     elif len(rows) > 1:
@@ -99,6 +115,7 @@ def init_db():
         conn.commit()
 
     conn.close()
+    _encrypt_saves()
 
 def load_user_profile():
     """Loads the user profile from the SQLite database."""
@@ -107,18 +124,20 @@ def load_user_profile():
         "avatar_idx": 0,
         "wins": 0,
         "losses": 0,
-        "coins": 100000,
+        "coins": 10000,
         "rank": "Wood",
         "rp": 0,
         "xp": 0,
         "level": 1,
         "last_replenish": 0,
         "streak": 0,
-        "biggest_win": 0
+        "biggest_win": 0,
+        "tutorial_seen": 0
     }
 
     if not os.path.exists(DB_PATH):
         init_db()
+    _decrypt_saves()
 
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -145,10 +164,12 @@ def load_user_profile():
                 data = defaults.copy()
                 save_user_profile(data)  # Reset and re-sign
 
+            _encrypt_saves()
             return data
     except Exception as e:
         print(f"Database load error: {e}")
 
+    _encrypt_saves()
     return defaults
 
 def update_progression(xp_gain, rp_gain=0):
@@ -192,6 +213,7 @@ def save_user_profile(stats_dict):
     """Saves the user profile to the SQLite database."""
     if not os.path.exists(DB_PATH):
         init_db()
+    _decrypt_saves()
 
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -200,21 +222,22 @@ def save_user_profile(stats_dict):
         # Update the single profile row (ID 1)
         cursor.execute('''
             UPDATE user_profile SET
-            name = ?, avatar_idx = ?, wins = ?, losses = ?, coins = ?, rank = ?, rp = ?, xp = ?, level = ?, last_replenish = ?, streak = ?, biggest_win = ?
+            name = ?, avatar_idx = ?, wins = ?, losses = ?, coins = ?, rank = ?, rp = ?, xp = ?, level = ?, last_replenish = ?, streak = ?, biggest_win = ?, tutorial_seen = ?
             WHERE id = 1
         ''', (
             stats_dict.get("name", "Player"),
             stats_dict.get("avatar_idx", 0),
             stats_dict.get("wins", 0),
             stats_dict.get("losses", 0),
-            stats_dict.get("coins", 100000),
+            stats_dict.get("coins", 10000),
             stats_dict.get("rank", "Wood"),
             stats_dict.get("rp", 0),
             stats_dict.get("xp", 0),
             stats_dict.get("level", 1),
             stats_dict.get("last_replenish", 0),
             stats_dict.get("streak", 0),
-            stats_dict.get("biggest_win", 0)
+            stats_dict.get("biggest_win", 0),
+            stats_dict.get("tutorial_seen", 0)
         ))
             
         conn.commit()
@@ -223,6 +246,8 @@ def save_user_profile(stats_dict):
         # ── SECURITY: Sign the save data after writing ──
         security_sign_save(stats_dict, DB_PATH)
 
+        _encrypt_saves()
+
     except Exception as e:
         print(f"Database save error: {e}")
 
@@ -230,6 +255,8 @@ def add_match_history_record(mode, result, coins_change, rp_change, xp_change):
     """Inserts a record of a completed match into match_history."""
     if not os.path.exists(DB_PATH):
         init_db()
+    else:
+        _decrypt_saves()
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -239,6 +266,7 @@ def add_match_history_record(mode, result, coins_change, rp_change, xp_change):
         ''', (mode, result, coins_change, rp_change, xp_change))
         conn.commit()
         conn.close()
+        _encrypt_saves()
     except Exception as e:
         print(f"Error adding match history: {e}")
 
@@ -246,6 +274,8 @@ def get_match_history(limit=10):
     """Retrieves the recent match history records."""
     if not os.path.exists(DB_PATH):
         init_db()
+    else:
+        _decrypt_saves()
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
@@ -258,7 +288,9 @@ def get_match_history(limit=10):
         ''', (limit,))
         rows = cursor.fetchall()
         conn.close()
+        _encrypt_saves()
         return [dict(row) for row in rows]
     except Exception as e:
         print(f"Error getting match history: {e}")
+        _encrypt_saves()
         return []

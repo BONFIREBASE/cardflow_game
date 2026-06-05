@@ -17,6 +17,7 @@ from ui.reward_modal import DailyRewardModal
 from ui.quest_modal import DailyQuestModal
 from ui.match_history import MatchHistoryModal
 from ui.achievement_modal import AchievementModal
+from ui.tutorial_modal import TutorialModal
 from ui.confirmation_modal import ConfirmationModal
 from ui.ingame_menu import InGameMenu
 from ui.dealer import DealerManager
@@ -268,6 +269,7 @@ def main():
     quest_modal = DailyQuestModal(font_title, font_body, font_small)
     history_modal = MatchHistoryModal(font_title, font_body, font_small)
     achievement_modal = AchievementModal(font_title, font_body, font_small)
+    tutorial_modal = TutorialModal(font_title, font_body, font_small, font_btn)
     confirmation_modal = ConfirmationModal(font_title, font_body, font_small)
 
     ach_mgr = achievement_modal.manager
@@ -791,6 +793,16 @@ def main():
                 
                 reward_modal.open(reward_amt)
 
+            if profile_data.get("tutorial_seen", 0) == 0 and not reward_modal.active and not tutorial_modal.active:
+                def mark_tutorial_seen():
+                    profile_data["tutorial_seen"] = 1
+                    save_user_profile(profile_data)
+                tutorial_modal.open(callback=mark_tutorial_seen)
+
+            if tutorial_modal.active:
+                tutorial_modal.update(dt, mouse_pos)
+                tutorial_modal.draw(screen, WIDTH, HEIGHT)
+
             if reward_modal.active:
                 reward_modal.update(dt, mouse_pos)
                 reward_modal.draw(screen, WIDTH, HEIGHT)
@@ -830,6 +842,11 @@ def main():
                         sys.exit()
                     
                     confirmation_modal.open("Are you sure you want to quit the game?", confirm_quit_window)
+                    continue
+
+                if tutorial_modal.active:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        tutorial_modal.handle_click(event)
                     continue
 
                 if confirmation_modal.is_open:

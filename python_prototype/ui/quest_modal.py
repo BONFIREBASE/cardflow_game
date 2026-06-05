@@ -5,6 +5,7 @@ import json
 import time
 from ui.ui_components import Colors, Button, blur_surface
 from ui.paths import get_resource_path, get_save_path
+from ui.crypto_utils import encrypt_path, decrypt_path
 
 QUEST_FILE = get_save_path("quests.json")
 
@@ -62,8 +63,10 @@ class DailyQuestModal:
         defaults = self._get_default_quests()
         if os.path.exists(QUEST_FILE):
             try:
+                decrypt_path(QUEST_FILE)
                 with open(QUEST_FILE, "r") as f:
                     data = json.load(f)
+                encrypt_path(QUEST_FILE)
                 # Handle both old format (list) and new format (dict with timestamp)
                 if isinstance(data, dict):
                     quests = data.get("quests", defaults)
@@ -90,6 +93,7 @@ class DailyQuestModal:
         try:
             with open(QUEST_FILE, "w") as f:
                 json.dump({"quests": quests, "last_reset": timestamp}, f)
+            encrypt_path(QUEST_FILE)
         except Exception as e:
             print(f"Error saving quests: {e}")
 

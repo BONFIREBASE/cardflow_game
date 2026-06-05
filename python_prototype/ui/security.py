@@ -223,6 +223,94 @@ def verify_file_integrity(base_dir, manifest_path):
 # LAYER 3: Anti-Debug Detection
 # ═══════════════════════════════════════════════════════════════════════════
 
+_SUSPICIOUS_PROCESSES = [
+    "cheatengine", "cheat engine", "x64dbg", "x32dbg", "ollydbg",
+    "idapro64", "idapro", "idaq64", "idaq",
+    "processhacker", "procmon", "procexp", "processexplorer",
+    "reclass", "reclass.net", "dnspy", "httpanalyzer",
+    "frida", "frida-server", "httptoolkit", "charles", "burpsuite",
+    "wireshark", "dumpcap", "windbg", "dbgview", "debugview",
+    "ghidra", "binaryninja", "immunitydebugger",
+    "memu", "nox", "bluestacks",
+]
+
+
+def _get_process_list():
+    """Return lowercase process names currently running."""
+    names = set()
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            'tasklist /fo csv /nh',
+            shell=True, timeout=3,
+            creationflags=0x08000000  # CREATE_NO_WINDOW
+        ).decode('utf-8', errors='replace')
+        for line in out.strip().split('\n'):
+            line = line.strip().strip('"')
+            if line:
+                name = line.split('"')[0] if line.startswith('"') else line.split(',')[0]
+                names.add(name.strip('" ').lower())
+    except Exception:
+        pass
+    return names
+
+
+def _check_suspicious_processes():
+    """Check for known cheat/debug tools in the process list."""
+    procs = _get_process_list()
+    for suspect in _SUSPICIOUS_PROCESSES:
+        for p in procs:
+            if suspect in p:
+                return True, suspect
+    return False, None
+
+
+def _check_windows_debugger_api():
+    """
+    Uses Windows Native API / ctypes to detect a kernel debugger.
+    Checks:
+      1. IsDebuggerPresent (user-mode debugger flag)
+      2. NtQueryInformationProcess(ProcessDebugPort)
+      3. NtGlobalFlag (heap flags set by debugger)
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+
+        # 1. IsDebuggerPresent
+        is_debugger = kernel32.IsDebuggerPresent
+        is_debugger.restype = wintypes.BOOL
+        if is_debugger():
+            return True, "IsDebuggerPresent"
+
+        # 2. Check for remote debugger via NtQueryInformationProcess
+        ntdll = ctypes.WinDLL('ntdll', use_last_error=True)
+        ProcessDebugPort = 7
+        pb = ctypes.c_ulong()
+        ret_len = wintypes.ULONG()
+
+        nt_query = ntdll.NtQueryInformationProcess
+        nt_query.restype = wintypes.LONG
+        nt_query.argtypes = [
+            ctypes.c_void_p, wintypes.ULONG,
+            ctypes.c_void_p, wintypes.ULONG,
+            ctypes.POINTER(wintypes.ULONG)
+        ]
+
+        handle = ctypes.c_void_p(-1)  # NtCurrentProcess
+        status = nt_query(handle, ProcessDebugPort,
+                          ctypes.byref(pb), ctypes.sizeof(pb),
+                          ctypes.byref(ret_len))
+        if status >= 0 and pb.value != 0:
+            return True, "NtQueryDebugPort"
+
+    except Exception:
+        pass
+    return False, None
+
+
 def is_debugger_attached():
     """
     Checks if a Python debugger is attached to the process.
@@ -231,20 +319,30 @@ def is_debugger_attached():
     # Check sys.gettrace (set by most Python debuggers)
     if sys.gettrace() is not None:
         return True
-    
+
+    # Windows API debugger checks
+    found, _ = _check_windows_debugger_api()
+    if found:
+        return True
+
     # Check for common debugging environment variables
     debug_env_vars = [
-        'PYTHONDONTWRITEBYTECODE',   # Sometimes set by debuggers
-        'PYDEVD_USE_CYTHON',         # PyCharm debugger
+        'PYTHONDONTWRITEBYTECODE',
+        'PYDEVD_USE_CYTHON',
     ]
-    
-    # We only flag if MULTIPLE debug indicators are present
     debug_score = 0
     for var in debug_env_vars:
         if os.environ.get(var):
             debug_score += 1
-    
-    return debug_score >= 2
+    if debug_score >= 2:
+        return True
+
+    # Check for cheat/debug tool processes
+    found, _ = _check_suspicious_processes()
+    if found:
+        return True
+
+    return False
 
 
 def check_timing_anomaly():
@@ -253,15 +351,14 @@ def check_timing_anomaly():
     if a simple operation takes suspiciously long (indicating breakpoints).
     """
     start = time.perf_counter()
-    
-    # Simple computation that should be near-instant
-    _ = sum(range(1000))
-    
+
+    # Multiple rapid operations to detect stepping
+    for _ in range(5):
+        _ = [i ** 2 for i in range(5000)]
+
     elapsed = time.perf_counter() - start
-    
-    # If a simple sum of 1000 numbers takes more than 1 second,
-    # something is intercepting execution
-    return elapsed > 1.0
+
+    return elapsed > 2.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -277,6 +374,7 @@ CRITICAL_FILES = [
     os.path.join("python_prototype", "ui", "database.py"),
     os.path.join("python_prototype", "ui", "progression_manager.py"),
     os.path.join("python_prototype", "ui", "chips.py"),
+    os.path.join("python_prototype", "ui", "crypto_utils.py"),
 ]
 
 

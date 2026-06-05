@@ -2,6 +2,7 @@ import os
 import json
 import random
 import pygame
+from ui.crypto_utils import encrypt_path, decrypt_path
 
 
 def _load_sfx(sfx_dir, filename, default_volume):
@@ -86,10 +87,12 @@ class AudioManager:
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
             if os.path.exists(self.SETTINGS_FILE):
+                decrypt_path(self.SETTINGS_FILE)
                 with open(self.SETTINGS_FILE, "r") as f:
                     data = json.load(f)
-                    self.bgm_volume = data.get("bgm_volume", 1.0)
-                    self.sfx_volume = data.get("sfx_volume", 1.0)
+                encrypt_path(self.SETTINGS_FILE)
+                self.bgm_volume = data.get("bgm_volume", 1.0)
+                self.sfx_volume = data.get("sfx_volume", 1.0)
         except: pass
     
     def _save_audio_settings(self):
@@ -98,6 +101,7 @@ class AudioManager:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
             with open(self.SETTINGS_FILE, "w") as f:
                 json.dump({"bgm_volume": self.bgm_volume, "sfx_volume": self.sfx_volume}, f)
+            encrypt_path(self.SETTINGS_FILE)
         except: pass
     
     def set_sfx_volume(self, volume_factor):

@@ -2,6 +2,7 @@ import os
 import json
 import time
 from ui.paths import get_save_path
+from ui.crypto_utils import encrypt_path, decrypt_path
 
 ACHIEVEMENT_FILE = get_save_path("achievements.json")
 
@@ -51,8 +52,10 @@ class AchievementManager:
     def _load(self):
         if os.path.exists(ACHIEVEMENT_FILE):
             try:
+                decrypt_path(ACHIEVEMENT_FILE)
                 with open(ACHIEVEMENT_FILE, "r") as f:
                     data = json.load(f)
+                encrypt_path(ACHIEVEMENT_FILE)
                 prog = self._default_progress()
                 prog.update(data)
                 return prog
@@ -64,6 +67,7 @@ class AchievementManager:
         try:
             with open(ACHIEVEMENT_FILE, "w") as f:
                 json.dump(self.progress, f, indent=2)
+            encrypt_path(ACHIEVEMENT_FILE)
         except Exception as e:
             print(f"Error saving achievements: {e}")
 

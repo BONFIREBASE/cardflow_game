@@ -315,8 +315,3 @@ class ChipSystem:
         if self.hovered_bet and self.hover_timer >= 1.0:
             self._draw_tooltip(surface, self.hovered_bet['amount'], self.hovered_bet['x'], self.hovered_bet['y'])
             self._draw_tooltip(surface, self.hovered_bet['amount'], self.hovered_bet['x'], self.hovered_bet['y'])
-                surface.blit(self.dealer_img, (bx + 18 - 20, by + 50))
-
-        # Finally draw hovered tooltip if any
-        if self.hovered_bet and self.hover_timer >= 1.0:
-            self._draw_tooltip(surface, self.hovered_bet['amount'], self.hovered_bet['x'], self.hovered_bet['y'], self.hovered_bet.get('label', ''))
