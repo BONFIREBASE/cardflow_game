@@ -1,4 +1,4 @@
-# CardFlow (Tong-its) | RELEASED
+# CardFlow (Tong-its) | Card Game
 
 ![CardFlow Banner](https://img.shields.io/badge/Status-Released-brightgreen?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.12+-blue?style=for-the-badge&logo=python)
