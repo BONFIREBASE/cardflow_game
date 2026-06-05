@@ -1,6 +1,6 @@
 # CardFlow (Tong-its) | RELEASED
 
-![CardFlow Banner](https://img.shields.io/badge/Status-Prototype-orange?style=for-the-badge)
+![CardFlow Banner](https://img.shields.io/badge/Status-Released-brightgreen?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.12+-blue?style=for-the-badge&logo=python)
 ![Pygame](https://img.shields.io/badge/Library-Pygame-green?style=for-the-badge)
 
