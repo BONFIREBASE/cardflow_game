@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12+-blue?style=for-the-badge&logo=python)
 ![Pygame](https://img.shields.io/badge/Library-Pygame-green?style=for-the-badge)
 
-**Mama's Go** is a high-fidelity Tong-its card game implementation. Originally developed as a pure Python prototype, it serves as the logic foundation for an upcoming mobile release.
+**CardFlow** is a high-fidelity Tong-its card game implementation. Originally developed as a pure Python prototype, it serves as the logic foundation for an upcoming mobile release.
 
 ## 🃏 Features
 
@@ -38,7 +38,7 @@ python ui/main.py
 This project is the property of **BONFIRE BASE Studio**. 
 
 - **Viewing**: Public access is granted for review and educational purposes.
-- **Usage**: Free to use for personal, non-commercial purposes **only with explicit written consent from BONFIRE BASE**.
+- **Usage**: Free to use for personal, non-commercial purposes **only with explicit written consent from BONFIRE BASE Studio**.
 - **Commercial Use**: Strictly prohibited without a separate commercial agreement.
 
 ---
