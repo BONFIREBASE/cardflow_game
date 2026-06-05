@@ -20,7 +20,7 @@ class ProfileModal:
 
         # Modal Dimensions
         self.modal_w = 700
-        self.modal_h = 600
+        self.modal_h = 650
         self.rect = pygame.Rect(self.w // 2 - self.modal_w // 2, self.h // 2 - self.modal_h // 2, self.modal_w, self.modal_h)
 
         # Fonts
@@ -513,6 +513,11 @@ class ProfileModal:
             biggest_win = self.stats.get('biggest_win', 0)
             
             # Modernized Stats Cards
+            from ui.achievement_manager import AchievementManager, ACHIEVEMENTS
+            ach_mgr = AchievementManager()
+            unlocked = len(ach_mgr.progress["unlocked"])
+            total_ach = len(ACHIEVEMENTS)
+
             stats_to_draw = [
                 ("WINS", str(wins), col2_x, py + 120, 140),
                 ("LOSSES", str(losses), col2_x + 160, py + 120, 140),
@@ -520,7 +525,8 @@ class ProfileModal:
                 ("STREAK", str(streak), col2_x + 160, py + 200, 140),
                 ("BIGGEST WIN", f"{biggest_win} Coins", col2_x, py + 280, 300),
                 ("TOTAL GAMES", str(wins + losses), col2_x, py + 360, 140),
-                ("LEVEL", str(self.stats.get('level', 1)), col2_x + 160, py + 360, 140)
+                ("LEVEL", str(self.stats.get('level', 1)), col2_x + 160, py + 360, 140),
+                ("ACHIEVEMENTS", f"{unlocked}/{total_ach}", col2_x, py + 440, 300)
             ]
             for label, val, x, y, w in stats_to_draw:
                 pygame.draw.rect(surface, (25, 30, 45, 220), (x, y, w, 65), border_radius=12)

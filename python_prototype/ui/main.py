@@ -16,6 +16,7 @@ from ui.rules_modal import RulesModal
 from ui.reward_modal import DailyRewardModal
 from ui.quest_modal import DailyQuestModal
 from ui.match_history import MatchHistoryModal
+from ui.achievement_modal import AchievementModal
 from ui.confirmation_modal import ConfirmationModal
 from ui.ingame_menu import InGameMenu
 from ui.dealer import DealerManager
@@ -266,7 +267,18 @@ def main():
     reward_modal = DailyRewardModal(font_title, font_body, font_small)
     quest_modal = DailyQuestModal(font_title, font_body, font_small)
     history_modal = MatchHistoryModal(font_title, font_body, font_small)
+    achievement_modal = AchievementModal(font_title, font_body, font_small)
     confirmation_modal = ConfirmationModal(font_title, font_body, font_small)
+
+    ach_mgr = achievement_modal.manager
+    ach_mgr.update_stat("level", player_stats.get("level", 1))
+    ach_mgr.update_stat("wins", player_stats.get("wins", 0))
+    ach_mgr.update_stat("games_played", player_stats.get("wins", 0) + player_stats.get("losses", 0))
+    if player_stats.get("rank") == "Immortal":
+        ach_mgr.progress["has_immortal_rank"] = True
+    ach_mgr.update_stat("streak", player_stats.get("streak", 0))
+    ach_mgr.check_and_unlock()
+    ach_mgr.save()
     ingame_menu = InGameMenu(font_title, font_body)
 
     bot1_info = generate_npc(av_pools, exclude_names=[player_name], exclude_avatars=[current_avatar])
@@ -691,7 +703,8 @@ def main():
             
             lobby_particles.update(dt)
             lobby.update(dt, mouse_pos)
-            lobby.draw(screen, player_name, current_avatar, player_stats, lobby_bkg, quest_data=quest_modal.quests)
+            ach_unclaimed = achievement_modal.manager.get_unclaimed_count()
+            lobby.draw(screen, player_name, current_avatar, player_stats, lobby_bkg, quest_data=quest_modal.quests, ach_unclaimed=ach_unclaimed)
             lobby_particles.draw(screen)
 
             if lobby_coin_notif:
@@ -789,6 +802,10 @@ def main():
             if history_modal.active:
                 history_modal.update(dt, mouse_pos)
                 history_modal.draw(screen, WIDTH, HEIGHT)
+
+            if achievement_modal.active:
+                achievement_modal.update(dt, mouse_pos)
+                achievement_modal.draw(screen, WIDTH, HEIGHT)
 
             if confirmation_modal.is_open:
                 confirmation_modal.draw(screen, WIDTH, HEIGHT)
@@ -891,6 +908,31 @@ def main():
                         res = history_modal.handle_click(event)
                     continue
 
+                if achievement_modal.active:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        res = achievement_modal.handle_click(event)
+                        if res and res.get("type") == "claim":
+                            amt = res["amount"]
+                            player_stats["coins"] += amt
+                            profile_data["coins"] = player_stats["coins"]
+                            save_user_profile(profile_data)
+                            lobby_coin_notif = {
+                                'amount': amt,
+                                'timer': 0.0,
+                                'duration': 3.5,
+                                'x': WIDTH // 2,
+                                'y': HEIGHT // 2,
+                                'target_x': 140,
+                                'target_y': 40,
+                                'alpha': 255,
+                                'scale': 1.5
+                            }
+                            if SFX_TURN_END: SFX_TURN_END.play()
+                    elif event.type == pygame.MOUSEWHEEL:
+                        achievement_modal.scroll_y = max(0, min(achievement_modal.max_scroll,
+                            achievement_modal.scroll_y - event.y * 40))
+                    continue
+
                 if rules_modal.active:
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         if event.button == 1:
@@ -954,6 +996,9 @@ def main():
                         continue
                     if isinstance(sel_mode, dict) and sel_mode.get("type") == "history":
                         history_modal.open()
+                        continue
+                    if isinstance(sel_mode, dict) and sel_mode.get("type") == "achievements":
+                        achievement_modal.open()
                         continue
                     if isinstance(sel_mode, dict) and sel_mode.get("type") == "warning_modal":
                         msg = "This is a pro mode or advanced mode. Are you sure you want to play at this desired table even though your level is not yet high?"

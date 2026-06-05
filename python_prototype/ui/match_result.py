@@ -2,6 +2,7 @@
 
 from ui.database import load_user_profile, save_user_profile, add_match_history_record
 from ui.progression_manager import apply_rewards
+from ui.achievement_manager import AchievementManager
 from game.economy import EconomyManager
 from game.betting_configs import BETTING_CONFIGS
 
@@ -156,6 +157,30 @@ def handle_match_end(engine, player_name, player_stats, profile_data,
     
     mode_name = payout_details['mode'] if payout_details else 'Legacy'
     print(f"Match End [{mode_name}]: XP +{xp_gained}, RP {rp_gained:+}, Payout {payout}")
+
+    ach_mgr = AchievementManager()
+    ach_mgr.update_stat("games_played", 1)
+    if is_win:
+        ach_mgr.update_stat("wins", 1)
+        if is_tongits:
+            ach_mgr.update_stat("tongits_wins", 1)
+        if isinstance(target_bet_limit, int) and target_bet_limit >= 1000:
+            ach_mgr.update_stat("high_stakes_wins", 1)
+            ach_mgr.update_stat("ranked_wins", 1)
+        if getattr(player, 'is_burned', False):
+            ach_mgr.update_stat("comeback_wins", 1)
+        win_method = getattr(engine, 'win_method', '')
+        if win_method == 'fight':
+            ach_mgr.update_stat("fight_wins", 1)
+        ach_mgr.update_stat("coins_earned", max(0, payout))
+
+    new_streak = player_stats.get("streak", 0)
+    ach_mgr.update_stat("streak", new_streak)
+
+    ach_mgr.update_stat("level", updated_profile.get("level", 1))
+    if updated_profile.get("rank") == "Immortal":
+        ach_mgr.progress["has_immortal_rank"] = True
+    ach_mgr.save()
 
     # Build floating text animations for coin changes
     post_game_floats = []
