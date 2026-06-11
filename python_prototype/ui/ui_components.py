@@ -2,6 +2,13 @@ import pygame
 import math
 
 
+def _ease_out_back(t):
+    """Eased overshoot (0->1 with a slight pop past 1 near the end)."""
+    c1 = 1.70158
+    c3 = c1 + 1.0
+    return 1.0 + c3 * (t - 1.0) ** 3 + c1 * (t - 1.0) ** 2
+
+
 def blur_surface(surf, factor=8, tint=(6, 10, 22), tint_alpha=200):
     """Fast frosted-glass blur: downscale → upscale + dark tint.
     Captures the current screen and returns a blurred, dimmed version."""
@@ -1227,10 +1234,24 @@ class GameOverOverlay:
         
         # Subtle glow instead of hard shadow
         glow_surf = self.font_title.render(main_text, True, (*title_color, 50))
-        for ox, oy in [(-2,0), (2,0), (0,-2), (0,2)]:
-            surface.blit(glow_surf, (center_x - title_surf.get_width() // 2 + ox, banner_y + 18 + oy))
-            
-        surface.blit(title_surf, (center_x - title_surf.get_width() // 2, banner_y + 18))
+
+        # Punchy reveal: scale the title in with an overshoot during entrance
+        title_p = min(1.0, self.time_alive / 0.45)
+        title_scale = max(0.05, _ease_out_back(title_p))
+        title_cx = center_x
+        title_cy = banner_y + 18 + title_surf.get_height() // 2
+        if self.time_alive < 0.55 and abs(title_scale - 1.0) > 0.01:
+            tw = max(1, int(title_surf.get_width() * title_scale))
+            th = max(1, int(title_surf.get_height() * title_scale))
+            ts_surf = pygame.transform.smoothscale(title_surf, (tw, th))
+            tg_surf = pygame.transform.smoothscale(glow_surf, (tw, th))
+            for ox, oy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+                surface.blit(tg_surf, (title_cx - tw // 2 + ox, title_cy - th // 2 + oy))
+            surface.blit(ts_surf, (title_cx - tw // 2, title_cy - th // 2))
+        else:
+            for ox, oy in [(-2,0), (2,0), (0,-2), (0,2)]:
+                surface.blit(glow_surf, (center_x - title_surf.get_width() // 2 + ox, banner_y + 18 + oy))
+            surface.blit(title_surf, (center_x - title_surf.get_width() // 2, banner_y + 18))
 
         payout = getattr(engine, 'payout', 0)
         method_y_offset = 60
@@ -1272,6 +1293,10 @@ class GameOverOverlay:
                 cw = base_card_w
                 ch = base_card_h
                 cy = card_start_y + 10
+
+            # Staggered slide-up entrance: each card rises into place in sequence
+            card_p = max(0.0, min(1.0, (self.time_alive - 0.15 - i * 0.12) / 0.45))
+            cy += int((1.0 - _ease_out_back(card_p)) * 90)
 
             # Horizontal positioning (centered group)
             total_w = int(base_card_w * 1.15) + base_card_w * (player_count - 1) + gap * (player_count - 1)

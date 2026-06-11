@@ -4,6 +4,7 @@ import math
 import os
 from ui.paths import get_resource_path
 from .ui_components import Colors
+from .animation import ease_out_cubic, ease_out_back
 from ui.assets_mgr import get_rank_badge
 
 
@@ -30,6 +31,14 @@ class Lobby:
         try: self.font_coins = pygame.font.Font(_sekuya_path, 28)
         except: self.font_coins = f_body
         self.time_acc = 0.0
+
+        # --- Cinematic entrance / motion state ---
+        self.intro_dur = 0.55          # per-banner slide duration
+        self.intro_stagger = 0.12      # delay between each banner
+        self.intro_fade_dur = 0.45     # full-scene fade-in duration
+        self.intro_t = 0.0             # advances each frame; reset by play_intro()
+        # Smoothly-eased per-banner hover amounts (0..1)
+        self.hover_lerp = [0.0, 0.0, 0.0]
         
         # Load app logo
         _logo_path = get_resource_path(os.path.join("assets", "images", "cardflow_logo.png"))
@@ -215,6 +224,23 @@ class Lobby:
         self.w, self.h = w, h
         self.recalc_banners()
 
+    def play_intro(self):
+        """Replay the cinematic entrance animation (call when the lobby becomes visible)."""
+        self.intro_t = 0.0
+        self.hover_lerp = [0.0 for _ in self.modes]
+
+    def _banner_intro(self, i):
+        """Return 0..1 entrance progress for banner i, accounting for stagger."""
+        t = (self.intro_t - i * self.intro_stagger) / self.intro_dur
+        return max(0.0, min(1.0, t))
+
+    @property
+    def _scene_fade(self):
+        """Return 0..1 opacity of the black fade-in overlay (1 = fully black)."""
+        if self.intro_t >= self.intro_fade_dur:
+            return 0.0
+        return 1.0 - (self.intro_t / self.intro_fade_dur)
+
     def recalc_banners(self):
         """Recalculate all bounding boxes and decorative surfaces for responsiveness."""
         # 1. Background Surfaces
@@ -255,12 +281,19 @@ class Lobby:
 
     def update(self, dt, m_pos):
         self.time_acc += dt
+        self.intro_t += dt
         self.hover_idx = -1
         for i, r in enumerate(self.banner_rects):
             if r.inflate(10, 10).collidepoint(m_pos):
                 self.hover_idx = i
                 break
-        
+
+        # Smoothly ease each banner's hover amount toward its target (0 or 1)
+        smooth = min(1.0, 12.0 * dt)
+        for i in range(len(self.hover_lerp)):
+            target = 1.0 if (self.hover_idx == i and self.modes[i][3]) else 0.0
+            self.hover_lerp[i] += (target - self.hover_lerp[i]) * smooth
+
         # Update particles
         for p in self.particles:
             p['y'] -= p['speed'] * dt
@@ -483,20 +516,29 @@ class Lobby:
         # 3. Central Modes
         for i, (m_name, m_sub, m_color, active) in enumerate(self.modes):
             rect = self.banner_rects[i].copy()
+            hl = self.hover_lerp[i] if i < len(self.hover_lerp) else 0.0
             is_hover = (self.hover_idx == i and active)
-            float_y = 12 * math.sin(self.time_acc * 1.8 + i * 0.9)
-            rect.y += float_y
-            
-            # Subtle glow behind card if active
+
+            # Cinematic entrance: staggered slide-up + settle
+            intro = ease_out_back(self._banner_intro(i)) if self._banner_intro(i) > 0 else 0.0
+            entrance_off = (1.0 - intro) * 70  # start 70px lower, ease into place
+
+            # Idle float (damped while entering so it doesn't fight the slide-in)
+            float_y = 12 * math.sin(self.time_acc * 1.8 + i * 0.9) * min(1.0, self._banner_intro(i))
+            rect.y += float_y + entrance_off
+
+            # Subtle glow behind card if active (intensity follows eased hover)
             if active:
-                ga = 30 if is_hover else 15
+                ga = int(15 + 20 * hl)
                 gs = pygame.Surface((rect.w + 40, rect.h + 40), pygame.SRCALPHA)
                 pygame.draw.rect(gs, (*m_color, ga), (0, 0, rect.w + 40, rect.h + 40), border_radius=40)
                 surface.blit(gs, (rect.x - 20, rect.y - 20))
 
-            if is_hover:
-                rect.inflate_ip(16, 16)
-                rect.y -= 15
+            # Smooth eased hover scale + lift (replaces the old instant snap)
+            if active and hl > 0.001:
+                infl = int(16 * hl)
+                rect.inflate_ip(infl, infl)
+                rect.y -= int(15 * hl)
             
             # --- Card Frame (Image-based) ---
             if i < len(self.icons) and self.icons[i]:
@@ -897,3 +939,10 @@ class Lobby:
         # 11. Keyboard Shortcuts Hint (bottom center)
         hint_txt = self.font_micro.render("ESC = Pause  | ClickAvatar = Profile", True, (80, 85, 100))
         surface.blit(hint_txt, (self.w // 2 - hint_txt.get_width() // 2, self.h - 18))
+
+        # 12. Cinematic scene fade-in (covers the whole lobby on entry, then clears)
+        fade = self._scene_fade
+        if fade > 0.0:
+            fade_surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+            fade_surf.fill((6, 4, 14, int(255 * fade)))
+            surface.blit(fade_surf, (0, 0))

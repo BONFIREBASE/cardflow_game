@@ -5,7 +5,7 @@ from game.models import TurnPhase, GamePhase
 from ui.animation import Timer
 
 
-def execute_bot_fight_responses(engine, player, ai_timer, dt):
+def execute_bot_fight_responses(engine, player, ai_timer, dt, emote_mgr=None):
     """
     Let bots respond to an active fight sequentially.
     
@@ -25,6 +25,8 @@ def execute_bot_fight_responses(engine, player, ai_timer, dt):
             if ai_timer.update(dt):
                 response = RuleBasedAI._should_respond_fight(engine, bot_player, engine.active_fight)
                 engine.respond_to_fight(bot_player, response)
+                if emote_mgr:
+                    emote_mgr.react(bot_idx, 'fight', bot_player, engine)
                 ai_timer = None
             break  # Wait for this bot to finish deciding before moving to the next
     
@@ -32,7 +34,7 @@ def execute_bot_fight_responses(engine, player, ai_timer, dt):
 
 
 def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, dt,
-                     game_state, calc_meld_zones_fn):
+                     game_state, calc_meld_zones_fn, emote_mgr=None):
     """
     Execute one tick of bot AI turn logic (draw, meld/sapaw, discard).
     
@@ -70,6 +72,7 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
         if RuleBasedAI._should_call_fight(engine, bot):
             engine.call_fight(bot)
             if audio.sfx_fight: audio.sfx_fight.play()
+            if emote_mgr: emote_mgr.react(pi, 'fight', bot, engine)
             return None, game_state  # Reset timer for next phase
     
     # Step 1: Draw
@@ -80,6 +83,7 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
             drawn_card = engine.discard_pile[-1]
             if engine.draw_from_discard(bot):
                 if audio.sfx_draw: audio.sfx_draw.play()
+                if emote_mgr: emote_mgr.react(pi, 'draw_discard', bot, engine)
                 if not bot.hand:
                     particles.emit(layout[f'bot{pi}_meld_x'], layout[f'bot{pi}_meld_y'], count=30)
                 else:
@@ -114,6 +118,7 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
         else:
             if engine.draw_from_deck(bot):
                 if audio.sfx_draw: audio.sfx_draw.play()
+                if emote_mgr: emote_mgr.react(pi, 'draw_deck', bot, engine)
                 if not bot.hand:
                     particles.emit(layout[f'bot{pi}_meld_x'], layout[f'bot{pi}_meld_y'], count=30)
                 else:
@@ -153,6 +158,7 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
                     })
             if audio.sfx_draw: audio.sfx_draw.play()
             particles.emit(target_x, target_y, count=15)
+            if emote_mgr: emote_mgr.react(pi, 'meld', bot, engine)
 
         # Use strategic sapaw (with deception logic for HARD+ bots)
         pre_sapaw_melds = sum(len(tm.cards) for tm in engine.table_melds)
@@ -164,11 +170,13 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
         if post_sapaw_melds > pre_sapaw_melds:
             dropped_any = True
             if audio.sfx_sapaw: audio.sfx_sapaw.play()
+            if emote_mgr: emote_mgr.react(pi, 'sapaw', bot, engine)
 
         if not dropped_any:
             if engine.game_phase != GamePhase.RESOLVING_FIGHT and RuleBasedAI._should_call_fight(engine, bot):     
                 engine.call_fight(bot)
                 if audio.sfx_fight: audio.sfx_fight.play()
+                if emote_mgr: emote_mgr.react(pi, 'fight', bot, engine)
 
             engine.skip_to_discard()
             ai_timer = Timer(1.0)
@@ -190,6 +198,7 @@ def execute_bot_turn(engine, layout, flying_cards, particles, audio, ai_timer, d
                     'elapsed': 0, 'duration': 0.45, 'player_idx': pi,
                     'is_face_up': True, 'card': card
                 })
+                if emote_mgr: emote_mgr.react(pi, 'discard', bot, engine)
                 
                 if game_state == 'dealer_discard':
                     game_state = 'playing'

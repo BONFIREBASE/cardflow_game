@@ -333,9 +333,17 @@ class RuleBasedAI:
             for card, meld in options:
                 if card not in player.hand:
                     continue
-                # Deception hold
-                hold_thr = 0.65 if diff == 'HARD' else 0.50
-                if deck_rem > 25 and card.value < 7 and len(player.melds) > 0:
+                # Deception hold: keep low cards to fake a heavy hand.
+                # Scales monotonically with difficulty so higher tiers are
+                # consistently more deceptive (EASY plays transparently).
+                hold_thr = {
+                    'EASY': 0.0,
+                    'MEDIUM': 0.25,
+                    'HARD': 0.50,
+                    'ELITE': 0.65,
+                    'LEGENDARY': 0.80,
+                }.get(diff, 0.50)
+                if hold_thr > 0 and deck_rem > 25 and card.value < 7 and len(player.melds) > 0:
                     if random.random() < hold_thr:
                         continue
                 if engine.sapaw(player, card, meld):

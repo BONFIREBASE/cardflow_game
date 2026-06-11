@@ -31,6 +31,7 @@ from ui.card_helpers import get_card_filename, draw_hand_ribbon, load_gif
 from ui.npc_manager import MALE_NAMES, FEMALE_NAMES, load_avatar_pools, generate_npc
 from ui.audio_manager import AudioManager
 from ui.bot_executor import execute_bot_turn, execute_bot_fight_responses
+from ui.bot_emotes import EmoteManager
 from ui.match_result import handle_match_end
 
 from ui.database import init_db, load_user_profile, save_user_profile
@@ -305,6 +306,7 @@ def main():
     engine.players[1].rp = bot1_info[2].get('rp', 0)
     engine.players[1].wins = bot1_info[2].get('wins', 0)
     engine.players[1].losses = bot1_info[2].get('losses', 0)
+    engine.players[1].difficulty = bot1_info[2].get('difficulty')
 
     engine.players[2].rank = bot2_info[2]['rank']
     engine.players[2].level = bot2_info[2]['level']
@@ -312,11 +314,13 @@ def main():
     engine.players[2].rp = bot2_info[2].get('rp', 0)
     engine.players[2].wins = bot2_info[2].get('wins', 0)
     engine.players[2].losses = bot2_info[2].get('losses', 0)
+    engine.players[2].difficulty = bot2_info[2].get('difficulty')
 
 
     anim_mgr = AnimationManager()
     particles = ParticleEmitter()
     lobby_particles = ParticleEmitter()
+    bot_emotes = EmoteManager()
     ai_timer = None
     AI_THINK_DELAY = 0.7
     splash_frames = []
@@ -454,6 +458,7 @@ def main():
         tick_played = False
         all_bets_announced = False
         bet_outro_exploded = False
+        bot_emotes.clear()
         if SFX_TICK: SFX_TICK.stop()
 
         if target_state == 'lobby':
@@ -657,6 +662,24 @@ def main():
     running = True
 
     active_toasts = []
+
+    _prev_game_state = None  # tracks state changes to trigger scene transitions
+
+    def scene_fade_out(duration=0.28, color=(6, 4, 14)):
+        """Quick cinematic fade-to-black over the current frame when launching a scene."""
+        try:
+            snapshot = screen.copy()
+        except Exception:
+            return
+        overlay = pygame.Surface((WIDTH, HEIGHT))
+        overlay.fill(color)
+        steps = max(1, int(duration * 60))
+        for s in range(steps + 1):
+            screen.blit(snapshot, (0, 0))
+            overlay.set_alpha(int(255 * (s / steps)))
+            screen.blit(overlay, (0, 0))
+            pygame.display.flip()
+            clock.tick(60)
     
     while running:
         show_get_card_hint = False
@@ -666,6 +689,10 @@ def main():
             
         mouse_pos = pygame.mouse.get_pos()
         chip_system.update(dt, mouse_pos)
+
+        # Track the last non-lobby state so returning to the lobby replays its intro
+        if game_state != 'lobby':
+            _prev_game_state = game_state
 
         if game_state == 'splashscreen':
             for event in pygame.event.get():
@@ -696,6 +723,11 @@ def main():
             continue
 
         if game_state == 'lobby':
+            # Replay the cinematic entrance whenever we (re)enter the lobby
+            if _prev_game_state != 'lobby':
+                lobby.play_intro()
+                lobby_particles.clear()
+            _prev_game_state = 'lobby'
             screen.fill((10, 15, 30))
             
             if random.random() < 0.08:
@@ -1023,6 +1055,7 @@ def main():
                         def proceed():
                             nonlocal target_bet_limit
                             target_bet_limit = sel_mode["bet"]
+                            scene_fade_out()
                             start_new_game(target_state='betting')
                             
                         confirmation_modal.open(msg, proceed)
@@ -1033,8 +1066,10 @@ def main():
                         target_bet_limit = sel_mode["bet"]
                         
                     if isinstance(sel_mode, dict) and sel_mode.get("mode_idx") == 1:
+                        scene_fade_out()
                         start_new_game(target_state='shuffling')
                     else:
+                        scene_fade_out()
                         start_new_game(target_state='betting')
             
             pygame.display.flip()
@@ -2111,13 +2146,15 @@ def main():
                 mouse_down_pos = None; mouse_down_card = None; is_dragging = False
 
      
-        ai_timer = execute_bot_fight_responses(engine, player, ai_timer, dt)
+        ai_timer = execute_bot_fight_responses(engine, player, ai_timer, dt, emote_mgr=bot_emotes)
 
        
         ai_timer, game_state = execute_bot_turn(
             engine, layout, flying_cards, particles, audio, ai_timer, dt,
-            game_state, calc_meld_zones
+            game_state, calc_meld_zones, emote_mgr=bot_emotes
         )
+
+        bot_emotes.update(dt)
 
         
         if background: screen.blit(background,(0,0))
@@ -2265,6 +2302,14 @@ def main():
             bmy = layout['bot1_meld_y'] if bi==1 else layout['bot2_meld_y']
             if bot.melds:
                 draw_player_melds(screen, bot.melds, bmx, bmy, max_w=280)
+
+        # Bot reaction emotes (pop above each bot's panel; panel top is at y-45)
+        if game_state in ('playing', 'dealer_discard'):
+            emote_positions = {
+                1: (layout['bot1_x'], layout['bot1_y'] - 45),
+                2: (layout['bot2_x'], layout['bot2_y'] - 45),
+            }
+            bot_emotes.draw(screen, emote_positions)
         
         if game_state in ('playing', 'dealer_discard', 'game_over'):
             chip_system.draw(screen)
