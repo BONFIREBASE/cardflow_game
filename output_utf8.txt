@@ -1,2 +1,0 @@
-﻿Found in key 'g': https://jitter.video
-Saved file to: c:\Users\Project\cardflow_game\assets\splashscreen_cleaned.json
