@@ -85,7 +85,6 @@ class ChipSystem:
         MAX_PER_STACK = 8
         stacks = [chips[i:i + MAX_PER_STACK] for i in range(0, len(chips), MAX_PER_STACK)]
         
-        import random
         for i, stack in enumerate(stacks):
             stack_x = base_x + (i * 22) - (len(stacks) * 11)
             stack_y = base_y
@@ -313,5 +312,4 @@ class ChipSystem:
 
         # Finally draw hovered tooltip if any
         if self.hovered_bet and self.hover_timer >= 1.0:
-            self._draw_tooltip(surface, self.hovered_bet['amount'], self.hovered_bet['x'], self.hovered_bet['y'])
             self._draw_tooltip(surface, self.hovered_bet['amount'], self.hovered_bet['x'], self.hovered_bet['y'])
